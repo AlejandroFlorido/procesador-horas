@@ -175,6 +175,9 @@
   #adelanto-info { grid-column: 1 / -1; font-size: 13.5px; color: var(--fg-dim); min-height: 19px; }
   #adelanto-info.error { color: #ff8a8a; }
   #adelanto-info.ok { color: var(--ok-fg); }
+  #adelanto-info.alerta { color: #ffe699; background: #5a4a1a; padding: 8px 10px; border-radius: 5px; }
+  .form-adelanto option.negativo { color: #7f6000; background: #fff2b3; font-weight: 700; }
+  .tabla-adelantos tr.negativo td { background: #5a4a1a; color: #ffe699; }
   #adelanto-info b { color: var(--fg); }
   @media (max-width: 640px) { .form-adelanto { grid-template-columns: 1fr; } }
   .tabla-adelantos { margin-top: 16px; border: 1px solid #3f3f3f; border-radius: 8px; overflow: hidden; background: var(--bg-2); }
@@ -689,15 +692,17 @@ function dibujarAdelantos() {
   const elegido = sel.value;
   sel.innerHTML = `<option value="">— Elegí un empleado —</option>` + emps.map(e => {
     const tiene = e.id in flujo.adelantos;
-    return `<option value="${esc(e.id)}"${tiene ? ' class="con-adelanto"' : ""}>${tiene ? "✓ " : ""}${esc(nombreDe(e))} (${esc(e.id)})${tiene ? " — adelanto " + pesos(flujo.adelantos[e.id]) : ""}</option>`;
+    const negativo = tiene && flujo.adelantos[e.id] > sueldoDe(e);
+    return `<option value="${esc(e.id)}"${tiene ? ` class="${negativo ? "negativo" : "con-adelanto"}"` : ""}>${tiene ? (negativo ? "⚠ " : "✓ ") : ""}${esc(nombreDe(e))} (${esc(e.id)})${tiene ? " — adelanto " + pesos(flujo.adelantos[e.id]) : ""}</option>`;
   }).join("");
   sel.value = emps.some(e => e.id === elegido) ? elegido : "";
 
   let tS = 0, tA = 0;
   $("adelantos-filas").innerHTML = emps.map(e => {
     const s = sueldoDe(e), a = flujo.adelantos[e.id] || 0, tiene = e.id in flujo.adelantos;
+    const negativo = tiene && a > s;
     tS += s; tA += a;
-    return `<tr class="${tiene ? "con-adelanto" : ""}"><td>${tiene ? "✓ " : ""}${esc(nombreDe(e))} <span style="color:var(--fg-dim)">(${esc(e.id)})</span></td>
+    return `<tr class="${negativo ? "negativo" : tiene ? "con-adelanto" : ""}"><td>${tiene ? (negativo ? "⚠ " : "✓ ") : ""}${esc(nombreDe(e))} <span style="color:var(--fg-dim)">(${esc(e.id)})</span></td>
       <td class="num">${esc(e.total)}</td><td class="num">${pesos(s)}</td><td class="num">${tiene ? pesos(a) : "—"}</td>
       <td class="num"><b>${pesos(s - a)}</b></td>
       <td>${tiene ? `<button class="quitar" data-id="${esc(e.id)}" title="Por si te equivocaste">Deshacer</button>` : ""}</td></tr>`;
@@ -714,8 +719,12 @@ function mostrarInfoEmpleado() {
   $("btn-restar").disabled = !e || yaTiene;
   $("adelanto-monto").disabled = !e || yaTiene;
   if (!e) return infoAdelanto("Elegí el empleado que pidió adelanto y escribí el monto.");
-  if (yaTiene) return infoAdelanto(`✓ A <b>${esc(nombreDe(e))}</b> ya se le restó un adelanto de <b>${pesos(flujo.adelantos[e.id])}</b>. ` +
-    `Si te equivocaste, tocá “Deshacer” en la tabla.`, "ok");
+  if (yaTiene) {
+    const neg = flujo.adelantos[e.id] > sueldoDe(e);
+    return infoAdelanto(`${neg ? "⚠" : "✓"} A <b>${esc(nombreDe(e))}</b> ya se le restó un adelanto de <b>${pesos(flujo.adelantos[e.id])}</b>` +
+      (neg ? ` (supera su sueldo por ${pesos(flujo.adelantos[e.id] - sueldoDe(e))})` : "") +
+      `. Si te equivocaste, tocá “Deshacer” en la tabla.`, neg ? "alerta" : "ok");
+  }
   infoAdelanto(`<b>${esc(nombreDe(e))}</b>: ${esc(e.total)} h · sueldo <b>${pesos(sueldoDe(e))}</b>`);
 }
 
@@ -724,12 +733,17 @@ function restarAdelanto() {
   if (!e || e.id in flujo.adelantos) return;
   const monto = leerPlata($("adelanto-monto").value);
   if (!monto || Number.isNaN(monto)) { infoAdelanto("Escribí un monto válido, por ejemplo 20000 o 20.000,50", "error"); $("adelanto-monto").focus(); return; }
-  // Regla: el adelanto no puede superar el sueldo. (Adelanto + mercadería sí puede: eso se resuelve en Mercadería.)
-  if (monto > sueldoDe(e)) { infoAdelanto(`El adelanto (${pesos(monto)}) es mayor que el sueldo de ${esc(nombreDe(e))} (${pesos(sueldoDe(e))}). Revisá el monto.`, "error"); return; }
+  // Regla: el adelanto PUEDE superar el sueldo, pero se avisa y queda en amarillo (a cobrar negativo).
   flujo.adelantos[e.id] = monto;
   $("adelanto-monto").value = "";
-  mostrarPasoFlujo("adelantos");   // redibuja lista (queda en verde), tabla y totales
-  infoAdelanto(`✓ Listo: a <b>${esc(nombreDe(e))}</b> se le restaron <b>${pesos(monto)}</b>. Le queda a cobrar <b>${pesos(sueldoDe(e) - monto)}</b>.`, "ok");
+  mostrarPasoFlujo("adelantos");   // redibuja lista (verde o amarillo), tabla y totales
+  const resto = sueldoDe(e) - monto;
+  if (resto < 0) {
+    infoAdelanto(`⚠ Atención: el adelanto de <b>${esc(nombreDe(e))}</b> (${pesos(monto)}) supera su sueldo (${pesos(sueldoDe(e))}). ` +
+      `Queda debiendo <b>${pesos(-resto)}</b>.`, "alerta");
+  } else {
+    infoAdelanto(`✓ Listo: a <b>${esc(nombreDe(e))}</b> se le restaron <b>${pesos(monto)}</b>. Le queda a cobrar <b>${pesos(resto)}</b>.`, "ok");
+  }
 }
 
 $("adelanto-empleado").addEventListener("change", () => { $("adelanto-monto").value = ""; mostrarInfoEmpleado(); if (!$("adelanto-monto").disabled) $("adelanto-monto").focus(); });
