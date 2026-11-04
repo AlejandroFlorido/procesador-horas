@@ -43,3 +43,11 @@ La versión web corre Python dentro del navegador ([Pyodide](https://pyodide.org
 pip install -r requirements.txt
 python lectorExcel_IA.py
 ```
+
+## Cómo activar Adelantos o Mercadería
+
+Las dos secciones de BRIE ya tienen su lugar preparado:
+
+1. **Lógica:** completar `adelantos.py` o `mercaderia.py` (funciones `procesar` y `exportar_excel`).
+2. **Pantalla:** en `index.html`, armar el contenido dentro de `<div id="contenido-adelantos">` o `<div id="contenido-mercaderia">`.
+3. **Activar:** en `index.html`, en `SECCIONES_BRIE`, cambiar `ACTIVA: false` por `ACTIVA: true`. Con eso se quita el cartel "Próximamente" del menú y se muestra el contenido.

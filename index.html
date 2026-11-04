@@ -186,14 +186,28 @@
   </div>
 </section>
 
-<!-- ===== Secciones todavía no disponibles ===== -->
-<section class="pantalla" id="pantalla-proximamente">
-  <div class="proximamente">
-    <div class="icono" id="pronto-icono">🚧</div>
-    <h2 id="pronto-titulo">Próximamente</h2>
+<!-- ===== BRIE › Adelantos =====
+     Para activarla: reemplazar el bloque "en-construccion" por el contenido real
+     y poner ACTIVA: true en SECCIONES_BRIE (más abajo, en el script). -->
+<section class="pantalla" id="pantalla-adelantos">
+  <div class="proximamente en-construccion">
+    <div class="icono">💵</div>
+    <h2>Adelantos — próximamente</h2>
     <p>Esta sección todavía está en construcción.</p>
     <a class="volver" href="#/brie">⬅ Volver a BRIE</a>
   </div>
+  <div class="contenido-seccion" id="contenido-adelantos"><!-- acá va el contenido de Adelantos --></div>
+</section>
+
+<!-- ===== BRIE › Mercadería ===== (igual que Adelantos) -->
+<section class="pantalla" id="pantalla-mercaderia">
+  <div class="proximamente en-construccion">
+    <div class="icono">📦</div>
+    <h2>Mercadería — próximamente</h2>
+    <p>Esta sección todavía está en construcción.</p>
+    <a class="volver" href="#/brie">⬅ Volver a BRIE</a>
+  </div>
+  <div class="contenido-seccion" id="contenido-mercaderia"><!-- acá va el contenido de Mercadería --></div>
 </section>
 
 <!-- ===== Liquidar horas (Bares y BRIE) ===== -->
@@ -265,7 +279,8 @@ async function iniciar() {
       await py.pyimport("micropip").install("openpyxl");
     }
     const ver = Date.now();   // evita versiones viejas en caché después de actualizar el repo
-    for (const f of ["lectorExcel_IA.py", "web.py"]) {
+    // Archivos de Python que usa la página. Para una sección nueva, agregar su .py acá.
+    for (const f of ["lectorExcel_IA.py", "web.py", "adelantos.py", "mercaderia.py"]) {
       const r = await fetch(`${f}?v=${ver}`);
       if (!r.ok) throw new Error(`No se pudo descargar ${f}`);
       py.FS.writeFile(`/home/pyodide/${f}`, await r.text());
@@ -438,6 +453,24 @@ document.addEventListener("drop", (e) => {
   if (f && seccion) pedirNombreBar(f);
 });
 
+// ---------- Secciones de BRIE ----------
+// Poné ACTIVA: true cuando una sección tenga su contenido listo:
+// se quita el cartel "PRÓXIMAMENTE" del menú y se muestra su contenido.
+const SECCIONES_BRIE = {
+  adelantos:  { ACTIVA: false },
+  mercaderia: { ACTIVA: false },
+};
+function prepararSecciones() {
+  for (const [id, cfg] of Object.entries(SECCIONES_BRIE)) {
+    const pantalla = $("pantalla-" + id);
+    pantalla.querySelector(".en-construccion").style.display = cfg.ACTIVA ? "none" : "block";
+    $("contenido-" + id).style.display = cfg.ACTIVA ? "block" : "none";
+    const tarjeta = document.querySelector(`.opcion[href="#/brie/${id}"] .pronto`);
+    if (tarjeta) tarjeta.style.display = cfg.ACTIVA ? "none" : "inline-block";
+  }
+}
+prepararSecciones();
+
 // ---------- Navegación entre menús (#/bares, #/brie/liquidar, ...) ----------
 const RUTAS = {
   "/":               { pantalla: "inicio", migas: [] },
@@ -446,9 +479,9 @@ const RUTAS = {
   "/brie":           { pantalla: "brie", migas: [["BRIE", null]] },
   "/brie/liquidar":  { pantalla: "liquidar", seccion: "brie", titulo: "Liquidar horas · BRIE",
                        migas: [["BRIE", "#/brie"], ["Liquidar", null]] },
-  "/brie/adelantos": { pantalla: "proximamente", icono: "💵", titulo: "Adelantos",
+  "/brie/adelantos": { pantalla: "adelantos",
                        migas: [["BRIE", "#/brie"], ["Adelantos", null]] },
-  "/brie/mercaderia":{ pantalla: "proximamente", icono: "📦", titulo: "Mercadería",
+  "/brie/mercaderia":{ pantalla: "mercaderia",
                        migas: [["BRIE", "#/brie"], ["Mercadería", null]] },
 };
 
@@ -470,10 +503,6 @@ function navegar() {
     if (!web) $("cargando").style.display = "flex";
   } else {
     $("cargando").style.display = "none";
-  }
-  if (ruta.pantalla === "proximamente") {
-    $("pronto-icono").textContent = ruta.icono;
-    $("pronto-titulo").textContent = ruta.titulo + " — próximamente";
   }
   window.scrollTo(0, 0);
 }
