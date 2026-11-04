@@ -86,6 +86,21 @@
   @keyframes girar { to { transform: rotate(360deg); } }
   #aviso { display: none; margin: 0 16px 10px; padding: 10px 12px; border-radius: 4px; background: var(--sin-bg); color: var(--sin-fg); font-size: 13px; white-space: pre-wrap; }
   footer { color: var(--fg-dim); font-size: 12px; padding: 0 16px 20px; }
+  /* Ventana para el nombre del bar */
+  #modal { position: fixed; inset: 0; background: rgba(10,10,10,.75); display: none; align-items: center; justify-content: center; z-index: 20; padding: 16px; }
+  #modal.abierto { display: flex; }
+  .caja { background: var(--bg-3); border: 2px solid var(--accent); border-radius: 10px; padding: 24px; width: 100%; max-width: 440px; }
+  .caja h2 { margin: 0 0 6px; font-size: 19px; }
+  .caja p { margin: 0 0 16px; color: var(--fg-dim); font-size: 13.5px; }
+  .caja .archivo-elegido { color: #9cdcfe; font-size: 13px; margin-bottom: 14px; word-break: break-all; }
+  .caja input { width: 100%; font-size: 18px; padding: 12px; background: var(--bg-2); color: var(--fg); border: 2px solid #4a4a4a; border-radius: 6px; }
+  .caja input:focus { outline: none; border-color: var(--accent); }
+  .caja .error { color: #ff8a8a; font-size: 13px; min-height: 18px; margin-top: 6px; }
+  .caja .acciones { display: flex; gap: 10px; justify-content: flex-end; margin-top: 12px; }
+  .caja .acciones button { padding: 11px 18px; font-size: 15px; }
+  .caja .principal { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .caja .principal:hover { background: #3a7bc8; }
+  #bar-actual { color: var(--fg); font-weight: 700; }
   @media (max-width: 640px) {
     input[type=search] { width: 100%; }
     .barra.busqueda { width: 100%; }
@@ -127,13 +142,27 @@
   <div id="vacio">Sin resultados</div>
 </main>
 
+<div id="modal" role="dialog" aria-modal="true" aria-labelledby="modal-titulo">
+  <div class="caja">
+    <h2 id="modal-titulo">¿De qué bar es este archivo?</h2>
+    <p>Escribí el nombre del bar. Con ese nombre se va a descargar el Excel.</p>
+    <div class="archivo-elegido" id="modal-archivo"></div>
+    <input type="text" id="nombre-bar" placeholder="Ej: BRIE Centro" autocomplete="off" maxlength="60">
+    <div class="error" id="modal-error"></div>
+    <div class="acciones">
+      <button id="modal-cancelar">Cancelar</button>
+      <button id="modal-aceptar" class="principal">Procesar ✔</button>
+    </div>
+  </div>
+</div>
+
 <footer>Las horas se calculan con fecha + hora de entrada y salida, así que los turnos que pasan la medianoche se cuentan bien.</footer>
 
 <script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
 let py = null, web = null;
-let datos = null, nombreArchivo = "horas";
+let datos = null, nombreArchivo = "horas", nombreBar = "", archivoPendiente = null;
 
 // ---------- Arranque de Python en el navegador ----------
 async function iniciar() {
@@ -173,7 +202,8 @@ async function leerArchivo(file) {
     return;
   }
   if (!datos.empleados.length) { mostrarAviso("No se encontraron fichadas válidas en el archivo"); datos = null; return; }
-  nombreArchivo = file.name.replace(/\.[^.]+$/, "");
+  // El Excel se descarga con el nombre del bar (sin caracteres que Windows no acepta)
+  nombreArchivo = nombreBar.replace(/[\\/:*?"<>|]+/g, "-").replace(/\s+/g, " ").trim() || "horas";
   $("busqueda").value = ""; $("solo-revisar").checked = false;
   ["btn-guardar", "btn-atras", "btn-limpiar", "solo-revisar", "busqueda"].forEach(id => $(id).disabled = false);
   $("zona").style.display = "none";
@@ -231,7 +261,7 @@ function dibujar(lista) {
       </table></div>
     </section>`).join("");
   const s = (k) => lista.reduce((a, e) => a + e[k], 0);
-  $("estado").textContent = datos ? `${lista.length} empleados · ${s("turnos")} turnos · ${s("extendidos")} extendidos · ` +
+  $("estado").innerHTML = datos ? `<span id="bar-actual">${esc(nombreBar)}</span> · ${lista.length} empleados · ${s("turnos")} turnos · ${s("extendidos")} extendidos · ` +
     `${s("sospechosos")} sospechosos · ${s("cortos")} muy cortos · ${s("sin_pareja")} sin pareja · ${s("repetidas")} repetidas ignoradas` : "";
 }
 
@@ -254,7 +284,7 @@ function guardar() {
     const blob = new Blob([py.FS.readFile(ruta)], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `${nombreArchivo}_procesado.xlsx`;
+    a.download = `${nombreArchivo}.xlsx`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   } catch (e) { mostrarAviso("No se pudo generar el Excel: " + e.message); }
@@ -267,7 +297,38 @@ function limpiar() {
   ["btn-guardar", "btn-atras", "btn-limpiar", "solo-revisar", "busqueda"].forEach(id => $(id).disabled = true);
 }
 
-$("archivo").addEventListener("change", (e) => e.target.files[0] && leerArchivo(e.target.files[0]));
+// ---------- Ventana: nombre del bar ----------
+function pedirNombreBar(file) {
+  if (!web) return;
+  if (!/\.(csv|xlsx)$/i.test(file.name)) { mostrarAviso("Solo se aceptan archivos .csv o .xlsx"); return; }
+  archivoPendiente = file;
+  $("modal-archivo").textContent = "Archivo: " + file.name;
+  $("modal-error").textContent = "";
+  $("nombre-bar").value = "";
+  $("modal").classList.add("abierto");
+  setTimeout(() => $("nombre-bar").focus(), 50);
+}
+function aceptarNombreBar() {
+  const nombre = $("nombre-bar").value.trim();
+  if (!nombre) { $("modal-error").textContent = "Escribí el nombre del bar para continuar"; $("nombre-bar").focus(); return; }
+  nombreBar = nombre;
+  $("modal").classList.remove("abierto");
+  const f = archivoPendiente; archivoPendiente = null;
+  leerArchivo(f);
+}
+function cancelarNombreBar() {
+  archivoPendiente = null; $("archivo").value = "";
+  $("modal").classList.remove("abierto");
+}
+$("modal-aceptar").addEventListener("click", aceptarNombreBar);
+$("modal-cancelar").addEventListener("click", cancelarNombreBar);
+$("nombre-bar").addEventListener("input", () => $("modal-error").textContent = "");
+$("nombre-bar").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") aceptarNombreBar();
+  if (e.key === "Escape") cancelarNombreBar();
+});
+
+$("archivo").addEventListener("change", (e) => { if (e.target.files[0]) pedirNombreBar(e.target.files[0]); e.target.value = ""; });
 $("btn-guardar").addEventListener("click", guardar);
 $("btn-atras").addEventListener("click", atras);
 $("btn-limpiar").addEventListener("click", limpiar);
@@ -277,7 +338,7 @@ $("busqueda").addEventListener("input", aplicarFiltros);
 // Arrastrar y soltar en cualquier parte de la página
 ["dragenter", "dragover"].forEach(ev => document.addEventListener(ev, (e) => { e.preventDefault(); $("zona").classList.add("encima"); }));
 ["dragleave", "drop"].forEach(ev => document.addEventListener(ev, (e) => { e.preventDefault(); $("zona").classList.remove("encima"); }));
-document.addEventListener("drop", (e) => { const f = e.dataTransfer.files[0]; if (f) leerArchivo(f); });
+document.addEventListener("drop", (e) => { const f = e.dataTransfer.files[0]; if (f) pedirNombreBar(f); });
 
 iniciar();
 </script>

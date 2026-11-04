@@ -9,6 +9,7 @@ Procesa el archivo que exporta el reloj de fichadas, calcula las horas de cada t
 - Separa ID, nombre, apellido, fecha y hora.
 - Empareja entrada y salida usando **fecha + hora**, así que los turnos que pasan la medianoche (ej. 19:00 → 02:00) se calculan bien.
 - Escribe las horas de cada turno y el **total semanal** (formato `[h]:mm:ss`).
+- Antes de procesar pide el **nombre del bar**; el Excel se descarga con ese nombre.
 - Encierra a cada empleado en un cuadro y agrega una hoja **Resumen**.
 - Marca con colores:
   - **Turno extendido**: más de 8 h + 1:30 de tolerancia (desde 9:30 h).
