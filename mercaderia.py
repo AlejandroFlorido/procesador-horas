@@ -12,8 +12,18 @@ Cuando esté definida:
 import json
 
 
+def liquidacion():
+    """DataFrame de la liquidación de horas ya procesada en el paso 1."""
+    import web
+    return web._df
+
+
 def procesar(ruta):
-    """Recibe la ruta del archivo cargado y devuelve un JSON para mostrar en la página."""
+    """
+    Paso del flujo BRIE: Liquidar → Adelantos → Mercadería.
+    Trabaja sobre la liquidación (paso 1) y los adelantos (paso 2).
+    Recibe la ruta del archivo cargado (si hace falta uno) y devuelve un JSON para la página.
+    """
     raise NotImplementedError("Sección mercaderia todavía no implementada")
 
 

@@ -7,7 +7,7 @@ Procesa el archivo que exporta el reloj de fichadas, calcula las horas de cada t
 ## Menú
 
 - **Bares** → liquidar horas.
-- **BRIE** → Liquidar (horas), Adelantos y Mercadería (estas dos, en construcción).
+- **BRIE** → flujo en 3 pasos: **Liquidar → Adelantos → Mercadería**. Desde Liquidar, el botón "Siguiente paso" lleva el archivo ya procesado a Adelantos, y de ahí a Mercadería (estas dos, en construcción).
 
 ## Qué hace la liquidación
 
@@ -48,6 +48,6 @@ python lectorExcel_IA.py
 
 Las dos secciones de BRIE ya tienen su lugar preparado:
 
-1. **Lógica:** completar `adelantos.py` o `mercaderia.py` (funciones `procesar` y `exportar_excel`).
+1. **Lógica:** completar `adelantos.py` o `mercaderia.py` (funciones `procesar` y `exportar_excel`). La liquidación del paso 1 está disponible con `liquidacion()`. En la página, cada paso lee y guarda sus resultados en el objeto `flujo` (`flujo.liquidacion`, `flujo.adelantos`, `flujo.mercaderia`).
 2. **Pantalla:** en `index.html`, armar el contenido dentro de `<div id="contenido-adelantos">` o `<div id="contenido-mercaderia">`.
 3. **Activar:** en `index.html`, en `SECCIONES_BRIE`, cambiar `ACTIVA: false` por `ACTIVA: true`. Con eso se quita el cartel "Próximamente" del menú y se muestra el contenido.

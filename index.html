@@ -127,6 +127,34 @@
   .proximamente .icono { font-size: 48px; }
   .proximamente h2 { margin: 12px 0 6px; }
   .proximamente p { color: var(--fg-dim); margin: 0 0 22px; }
+  /* ---------- Flujo BRIE: Liquidar → Adelantos → Mercadería ---------- */
+  .pasos { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+  .pasos .paso { display: flex; align-items: center; gap: 7px; padding: 5px 12px 5px 6px; border-radius: 20px; background: var(--bg-2); border: 1px solid #3f3f3f; color: var(--fg-dim); font-size: 13px; font-weight: 600; text-decoration: none; }
+  .pasos .paso .n { width: 22px; height: 22px; border-radius: 50%; background: #3a3a3a; color: #ccc; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+  .pasos .paso.hecho { color: var(--ok-fg); border-color: #2f6b44; }
+  .pasos .paso.hecho .n { background: #2f6b44; color: #fff; }
+  .pasos .paso.actual { color: #fff; border-color: var(--accent); background: #1a2533; }
+  .pasos .paso.actual .n { background: var(--accent); color: #fff; }
+  .pasos .flecha { color: #555; }
+  #pasos-liquidar { padding: 0 16px 10px; }
+  #pasos-liquidar:empty { display: none; }
+  .flujo { max-width: 900px; margin: 0 auto; padding: 20px 16px 30px; }
+  .contexto { margin: 16px 0; padding: 12px 14px; border-radius: 8px; background: var(--bg-3); border: 1px solid #3f3f3f; font-size: 14px; }
+  .contexto b { color: #fff; }
+  .contexto:empty { display: none; }
+  .sin-datos { text-align: center; padding: 40px 16px; }
+  .sin-datos .icono { font-size: 44px; }
+  .sin-datos h2 { margin: 10px 0 6px; }
+  .sin-datos p { color: var(--fg-dim); margin: 0 0 20px; }
+  .flujo .proximamente { padding: 36px 16px 20px; }
+  .acciones-flujo { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--linea); }
+  .boton-flujo { display: inline-block; text-decoration: none; background: var(--btn); color: var(--fg); border: 1px solid #4a4a4a; border-radius: 6px; padding: 11px 18px; font: 600 15px "Segoe UI", system-ui, sans-serif; cursor: pointer; }
+  .boton-flujo:hover:not(:disabled) { background: var(--btn-hover); color: #fff; }
+  .boton-flujo.principal { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .boton-flujo.principal:hover:not(:disabled) { background: #3a7bc8; }
+  .boton-flujo:disabled { opacity: .45; cursor: not-allowed; }
+  #btn-siguiente { display: none; background: var(--accent); border-color: var(--accent); color: #fff; }
+  #btn-siguiente:hover:not(:disabled) { background: #3a7bc8; }
   .volver { display: inline-block; background: var(--btn); color: var(--fg); text-decoration: none; padding: 10px 16px; border-radius: 6px; font-weight: 600; border: 1px solid #4a4a4a; }
   .volver:hover { background: var(--btn-hover); }
   @media (max-width: 640px) {
@@ -186,28 +214,58 @@
   </div>
 </section>
 
-<!-- ===== BRIE › Adelantos =====
-     Para activarla: reemplazar el bloque "en-construccion" por el contenido real
-     y poner ACTIVA: true en SECCIONES_BRIE (más abajo, en el script). -->
+<!-- ===== BRIE › Paso 2: Adelantos =====
+     Recibe la liquidación del paso 1 (variable "flujo" en el script).
+     Para activarla: armar el contenido en "contenido-adelantos" y poner ACTIVA: true en SECCIONES_BRIE. -->
 <section class="pantalla" id="pantalla-adelantos">
-  <div class="proximamente en-construccion">
-    <div class="icono">💵</div>
-    <h2>Adelantos — próximamente</h2>
-    <p>Esta sección todavía está en construcción.</p>
-    <a class="volver" href="#/brie">⬅ Volver a BRIE</a>
+  <div class="flujo">
+    <div class="pasos"></div>
+    <div class="contexto"></div>
+    <div class="sin-datos">
+      <div class="icono">🕒</div>
+      <h2>Primero hay que liquidar las horas</h2>
+      <p>Adelantos es el paso 2: trabaja sobre el archivo ya liquidado.</p>
+      <a class="boton-flujo principal" href="#/brie/liquidar">Ir a Liquidar ➜</a>
+    </div>
+    <div class="cuerpo">
+      <div class="proximamente en-construccion">
+        <div class="icono">💵</div>
+        <h2>Adelantos — próximamente</h2>
+        <p>Esta sección todavía está en construcción.</p>
+      </div>
+      <div class="contenido-seccion" id="contenido-adelantos"><!-- acá va el contenido de Adelantos --></div>
+      <div class="acciones-flujo">
+        <a class="boton-flujo" href="#/brie/liquidar">⬅ Volver a Liquidar</a>
+        <a class="boton-flujo principal" href="#/brie/mercaderia">Siguiente paso: Mercadería ➜</a>
+      </div>
+    </div>
   </div>
-  <div class="contenido-seccion" id="contenido-adelantos"><!-- acá va el contenido de Adelantos --></div>
 </section>
 
-<!-- ===== BRIE › Mercadería ===== (igual que Adelantos) -->
+<!-- ===== BRIE › Paso 3: Mercadería ===== (igual que Adelantos; recibe liquidación + adelantos) -->
 <section class="pantalla" id="pantalla-mercaderia">
-  <div class="proximamente en-construccion">
-    <div class="icono">📦</div>
-    <h2>Mercadería — próximamente</h2>
-    <p>Esta sección todavía está en construcción.</p>
-    <a class="volver" href="#/brie">⬅ Volver a BRIE</a>
+  <div class="flujo">
+    <div class="pasos"></div>
+    <div class="contexto"></div>
+    <div class="sin-datos">
+      <div class="icono">🕒</div>
+      <h2>Primero hay que liquidar las horas</h2>
+      <p>Mercadería es el paso 3: trabaja sobre el archivo ya liquidado.</p>
+      <a class="boton-flujo principal" href="#/brie/liquidar">Ir a Liquidar ➜</a>
+    </div>
+    <div class="cuerpo">
+      <div class="proximamente en-construccion">
+        <div class="icono">📦</div>
+        <h2>Mercadería — próximamente</h2>
+        <p>Esta sección todavía está en construcción.</p>
+      </div>
+      <div class="contenido-seccion" id="contenido-mercaderia"><!-- acá va el contenido de Mercadería --></div>
+      <div class="acciones-flujo">
+        <a class="boton-flujo" href="#/brie/adelantos">⬅ Volver a Adelantos</a>
+        <button class="boton-flujo principal" id="btn-finalizar" disabled title="Disponible cuando estén listas las secciones">Descargar liquidación final (próximamente)</button>
+      </div>
+    </div>
   </div>
-  <div class="contenido-seccion" id="contenido-mercaderia"><!-- acá va el contenido de Mercadería --></div>
 </section>
 
 <!-- ===== Liquidar horas (Bares y BRIE) ===== -->
@@ -221,12 +279,14 @@
     <button id="btn-atras" disabled>⬅ Back</button>
     <button id="btn-limpiar" disabled>↺ Clear</button>
     <label class="check"><input type="checkbox" id="solo-revisar" disabled> ⚠ Solo para revisar</label>
+    <button id="btn-siguiente" class="principal" disabled title="Primero cargá el archivo del reloj">Siguiente paso: Adelantos ➜</button>
   </div>
   <div class="barra busqueda">
     <input type="search" id="busqueda" placeholder="🔍 Buscar por ID, nombre o apellido" disabled>
   </div>
 </header>
 
+<div id="pasos-liquidar" class="pasos"></div>
 <div id="info">
   <div id="estado"></div>
   <div class="leyenda" id="leyenda"></div>
@@ -264,7 +324,12 @@
 const $ = (id) => document.getElementById(id);
 let py = null, web = null;
 let datos = null, nombreArchivo = "horas", nombreBar = "", archivoPendiente = null;
-let seccion = null;   // "bares" o "brie" mientras se está liquidando
+let seccion = null;   // "bares" o "brie": a qué negocio pertenece la pantalla actual
+let pantallaActual = null;
+
+// Lo que va pasando de un paso al otro en BRIE (Liquidar → Adelantos → Mercadería).
+// Cada sección lee lo anterior y guarda su resultado acá.
+const flujo = { local: "", liquidacion: null, adelantos: null, mercaderia: null };
 let errorInicio = null;
 
 // ---------- Arranque de Python en el navegador ----------
@@ -310,7 +375,12 @@ async function leerArchivo(file) {
   // El Excel se descarga con el nombre del bar (sin caracteres que Windows no acepta)
   nombreArchivo = nombreBar.replace(/[\\/:*?"<>|]+/g, "-").replace(/\s+/g, " ").trim() || "horas";
   $("busqueda").value = ""; $("solo-revisar").checked = false;
-  ["btn-guardar", "btn-atras", "btn-limpiar", "solo-revisar", "busqueda"].forEach(id => $(id).disabled = false);
+  ["btn-guardar", "btn-atras", "btn-limpiar", "solo-revisar", "busqueda", "btn-siguiente"].forEach(id => $(id).disabled = false);
+  $("btn-siguiente").title = "";
+  if (seccion === "brie") {   // un archivo nuevo reinicia el flujo de BRIE
+    Object.assign(flujo, { local: nombreBar, liquidacion: datos, adelantos: null, mercaderia: null });
+    dibujarPasos(1);
+  }
   $("zona").style.display = "none";
   dibujarLeyenda();
   if (datos.invalidas.length) {
@@ -399,7 +469,10 @@ function limpiar() {
   datos = null; $("vista").innerHTML = ""; $("vista").style.display = "none"; $("vacio").style.display = "none";
   $("zona").style.display = "block"; $("estado").textContent = ""; $("leyenda").innerHTML = ""; ocultarAviso();
   $("busqueda").value = ""; $("solo-revisar").checked = false; $("archivo").value = "";
-  ["btn-guardar", "btn-atras", "btn-limpiar", "solo-revisar", "busqueda"].forEach(id => $(id).disabled = true);
+  ["btn-guardar", "btn-atras", "btn-limpiar", "solo-revisar", "busqueda", "btn-siguiente"].forEach(id => $(id).disabled = true);
+  $("btn-siguiente").title = "Primero cargá el archivo del reloj";
+  Object.assign(flujo, { local: "", liquidacion: null, adelantos: null, mercaderia: null });
+  if (pantallaActual === "liquidar") dibujarPasos(seccion === "brie" ? 1 : null);
 }
 
 // ---------- Ventana: nombre del bar ----------
@@ -450,7 +523,7 @@ $("busqueda").addEventListener("input", aplicarFiltros);
 ["dragleave", "drop"].forEach(ev => document.addEventListener(ev, (e) => { e.preventDefault(); $("zona").classList.remove("encima"); }));
 document.addEventListener("drop", (e) => {
   const f = e.dataTransfer.files[0];
-  if (f && seccion) pedirNombreBar(f);
+  if (f && pantallaActual === "liquidar") pedirNombreBar(f);
 });
 
 // ---------- Secciones de BRIE ----------
@@ -471,17 +544,51 @@ function prepararSecciones() {
 }
 prepararSecciones();
 
+// ---------- Flujo BRIE ----------
+const PASOS = [["Liquidar", "#/brie/liquidar"], ["Adelantos", "#/brie/adelantos"], ["Mercadería", "#/brie/mercaderia"]];
+
+function dibujarPasos(actual) {
+  const html = !actual ? "" : PASOS.map(([nombre, href], i) => {
+    const n = i + 1;
+    const hecho = n < actual && (n === 1 ? !!flujo.liquidacion : true);
+    const clase = n === actual ? "actual" : hecho ? "hecho" : "";
+    return (i ? `<span class="flecha">›</span>` : "") +
+      `<a class="paso ${clase}" href="${href}"><span class="n">${hecho ? "✓" : n}</span>${nombre}</a>`;
+  }).join("");
+  document.querySelectorAll(".pasos").forEach(el => el.innerHTML = html);
+}
+
+const aMinutos = (t) => { const [h, m] = (t || "0:0").split(":").map(Number); return h * 60 + m; };
+const aHoras = (min) => `${Math.floor(min / 60)}:${String(min % 60).padStart(2, "0")}`;
+
+function mostrarPasoFlujo(id) {
+  const pantalla = $("pantalla-" + id);
+  const liq = flujo.liquidacion;
+  pantalla.querySelector(".sin-datos").style.display = liq ? "none" : "block";
+  pantalla.querySelector(".cuerpo").style.display = liq ? "block" : "none";
+  pantalla.querySelector(".contexto").innerHTML = !liq ? "" :
+    `Local: <b>${esc(flujo.local)}</b> · ${liq.empleados.length} empleados · ` +
+    `total liquidado <b>${aHoras(liq.empleados.reduce((a, e) => a + aMinutos(e.total), 0))} h</b>`;
+}
+
+// Liquidar → Adelantos (la liquidación ya quedó guardada en el flujo al procesar el archivo)
+function irASiguientePaso() {
+  if (!flujo.liquidacion) return;
+  location.hash = "#/brie/adelantos";
+}
+$("btn-siguiente").addEventListener("click", irASiguientePaso);
+
 // ---------- Navegación entre menús (#/bares, #/brie/liquidar, ...) ----------
 const RUTAS = {
   "/":               { pantalla: "inicio", migas: [] },
   "/bares":          { pantalla: "liquidar", seccion: "bares", titulo: "Liquidar horas · Bares",
                        migas: [["Bares", null]] },
-  "/brie":           { pantalla: "brie", migas: [["BRIE", null]] },
-  "/brie/liquidar":  { pantalla: "liquidar", seccion: "brie", titulo: "Liquidar horas · BRIE",
+  "/brie":           { pantalla: "brie", seccion: "brie", migas: [["BRIE", null]] },
+  "/brie/liquidar":  { pantalla: "liquidar", seccion: "brie", paso: 1, titulo: "Liquidar horas · BRIE",
                        migas: [["BRIE", "#/brie"], ["Liquidar", null]] },
-  "/brie/adelantos": { pantalla: "adelantos",
+  "/brie/adelantos": { pantalla: "adelantos", seccion: "brie", paso: 2,
                        migas: [["BRIE", "#/brie"], ["Adelantos", null]] },
-  "/brie/mercaderia":{ pantalla: "mercaderia",
+  "/brie/mercaderia":{ pantalla: "mercaderia", seccion: "brie", paso: 3,
                        migas: [["BRIE", "#/brie"], ["Mercadería", null]] },
 };
 
@@ -491,6 +598,7 @@ function navegar() {
   if ((ruta.seccion || null) !== seccion && datos) limpiar();
   cancelarNombreBar();
   seccion = ruta.seccion || null;
+  pantallaActual = ruta.pantalla;
 
   document.querySelectorAll(".pantalla").forEach(p => p.classList.remove("activa"));
   $("pantalla-" + ruta.pantalla).classList.add("activa");
@@ -504,6 +612,9 @@ function navegar() {
   } else {
     $("cargando").style.display = "none";
   }
+  dibujarPasos(ruta.paso || null);
+  $("btn-siguiente").style.display = ruta.paso === 1 ? "inline-block" : "none";
+  if (ruta.pantalla === "adelantos" || ruta.pantalla === "mercaderia") mostrarPasoFlujo(ruta.pantalla);
   window.scrollTo(0, 0);
 }
 window.addEventListener("hashchange", navegar);
@@ -511,7 +622,7 @@ navegar();
 
 // Python se carga en segundo plano mientras la persona elige en el menú
 iniciar().then(() => {
-  if (web && seccion) $("cargando").style.display = "none";
+  if (web && pantallaActual === "liquidar") $("cargando").style.display = "none";
 });
 </script>
 </body>
