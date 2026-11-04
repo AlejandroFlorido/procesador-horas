@@ -4,6 +4,11 @@ BRIE › Mercadería retirada por el personal.
 Sección preparada, todavía sin lógica. Se carga en el navegador igual que
 lectorExcel_IA.py, así que acá se puede usar pandas y openpyxl.
 
+Reglas ya definidas:
+  - El adelanto de un empleado NO puede superar su sueldo (se controla en Adelantos).
+  - Adelanto + mercadería SÍ puede superar el sueldo: en ese caso el "A cobrar"
+    queda negativo (el empleado debe la diferencia). No bloquear acá.
+
 Cuando esté definida:
   1. Escribir la lógica en procesar() y exportar_excel().
   2. Armar la pantalla en index.html, dentro de <div id="contenido-mercaderia">.

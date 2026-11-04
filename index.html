@@ -724,6 +724,7 @@ function restarAdelanto() {
   if (!e || e.id in flujo.adelantos) return;
   const monto = leerPlata($("adelanto-monto").value);
   if (!monto || Number.isNaN(monto)) { infoAdelanto("Escribí un monto válido, por ejemplo 20000 o 20.000,50", "error"); $("adelanto-monto").focus(); return; }
+  // Regla: el adelanto no puede superar el sueldo. (Adelanto + mercadería sí puede: eso se resuelve en Mercadería.)
   if (monto > sueldoDe(e)) { infoAdelanto(`El adelanto (${pesos(monto)}) es mayor que el sueldo de ${esc(nombreDe(e))} (${pesos(sueldoDe(e))}). Revisá el monto.`, "error"); return; }
   flujo.adelantos[e.id] = monto;
   $("adelanto-monto").value = "";
