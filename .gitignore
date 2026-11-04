@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+# Nunca subir archivos de fichadas ni resultados
+*.csv
+*.xlsx
+*.xls
