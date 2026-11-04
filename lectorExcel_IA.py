@@ -271,7 +271,8 @@ def encuadrar(ws, fila_ini, fila_fin, col_ini=1, col_fin=8):
             )
 
 
-def exportar_excel(df, ruta):
+def exportar_excel(df, ruta, sueldo_hora=None, adelantos=None):
+    """sueldo_hora y adelantos (dict id -> monto) son opcionales: los usa el flujo BRIE de la web."""
     wb = Workbook()
     ws = wb.active
     ws.title = "Horas"
@@ -316,6 +317,10 @@ def exportar_excel(df, ruta):
     wr = wb.create_sheet("Resumen")
     cab_r = ["ID", "Nombre", "Apellido", "Total horas", "Turnos", "Extendidos",
              "Sospechosos", "Muy cortos", "Sin pareja", "Repetidas ignoradas", "Estado"]
+    if sueldo_hora:
+        cab_r += ["Sueldo por hora", "Sueldo"]
+        if adelantos is not None:
+            cab_r += ["Adelanto", "A cobrar"]
     wr.append(cab_r)
     for c in wr[1]:
         c.fill, c.font, c.alignment = CABECERA_FILL, CABECERA_FONT, Alignment(horizontal="center", wrap_text=True)
@@ -333,11 +338,22 @@ def exportar_excel(df, ruta):
         for col, nivel in ((6, EXTENDIDO), (7, SOSPECHOSO), (8, CORTO), (9, SIN_PAREJA)):
             if valores[col - 1]:
                 wr.cell(i, col).fill, wr.cell(i, col).font = COLORES[nivel]
+        if sueldo_hora:
+            sueldo = round(r.total.total_seconds() / 3600 * sueldo_hora, 2)
+            montos = [sueldo_hora, sueldo]
+            if adelantos is not None:
+                adelanto = float(adelantos.get(str(r.id), 0) or 0)
+                montos += [adelanto, round(sueldo - adelanto, 2)]
+            for k, v in enumerate(montos, start=12):
+                c = wr.cell(i, k, v)
+                c.number_format = '"$" #,##0.00'
+                c.border = BORDE
+            wr.cell(i, 11 + len(montos)).font = Font(bold=True)
         estado = wr.cell(i, 11)
         estado.fill, estado.font = (COLORES[SOSPECHOSO] if revisar else
                                     (PatternFill("solid", fgColor="C6EFCE"), Font(color="006100", bold=True)))
 
-    for col, ancho in zip("ABCDEFGHIJK", [7, 14, 16, 12, 8, 11, 12, 11, 10, 12, 10]):
+    for col, ancho in zip("ABCDEFGHIJKLMNO", [7, 14, 16, 12, 8, 11, 12, 11, 10, 12, 10, 14, 15, 14, 15]):
         wr.column_dimensions[col].width = ancho
     wr.row_dimensions[1].height = 30
     wr.freeze_panes = "A2"

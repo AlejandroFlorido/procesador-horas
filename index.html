@@ -153,6 +153,37 @@
   .boton-flujo.principal { background: var(--accent); border-color: var(--accent); color: #fff; }
   .boton-flujo.principal:hover:not(:disabled) { background: #3a7bc8; }
   .boton-flujo:disabled { opacity: .45; cursor: not-allowed; }
+  /* Sueldo por hora (BRIE › Liquidar) */
+  #panel-sueldo { display: none; margin: 0 16px 10px; padding: 12px 14px; border-radius: 8px; background: var(--bg-3); border: 1px solid #3f3f3f; }
+  #panel-sueldo.visible { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+  #panel-sueldo label { font-weight: 700; }
+  #panel-sueldo small { color: var(--fg-dim); font-weight: 400; display: block; }
+  .campo-plata { display: flex; align-items: center; background: var(--bg-2); border: 2px solid #4a4a4a; border-radius: 6px; }
+  .campo-plata:focus-within { border-color: var(--accent); }
+  .campo-plata.falta { border-color: #e06c6c; }
+  .campo-plata span { padding: 0 4px 0 10px; color: var(--fg-dim); font-weight: 700; }
+  .campo-plata input { background: transparent; border: none; color: var(--fg); font-size: 17px; padding: 9px 10px 9px 2px; width: 150px; outline: none; }
+  #total-sueldos { color: #9cdcfe; font-size: 13.5px; }
+  .titulo .sueldo { color: var(--ok-fg); font-weight: 700; font-family: Consolas, monospace; }
+  /* Adelantos */
+  .form-adelanto { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto; gap: 10px; align-items: end; background: var(--bg-3); border: 1px solid #3f3f3f; border-radius: 8px; padding: 14px; }
+  .form-adelanto label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 5px; }
+  .form-adelanto select { width: 100%; font-size: 15px; padding: 10px; background: var(--bg-2); color: var(--fg); border: 2px solid #4a4a4a; border-radius: 6px; }
+  .form-adelanto select:focus { outline: none; border-color: var(--accent); }
+  .form-adelanto .campo-plata input { width: 100%; }
+  .form-adelanto option.con-adelanto { color: #2e9e57; background: #e7f6ec; font-weight: 700; }
+  #adelanto-info { grid-column: 1 / -1; font-size: 13.5px; color: var(--fg-dim); min-height: 19px; }
+  #adelanto-info.error { color: #ff8a8a; }
+  #adelanto-info.ok { color: var(--ok-fg); }
+  #adelanto-info b { color: var(--fg); }
+  @media (max-width: 640px) { .form-adelanto { grid-template-columns: 1fr; } }
+  .tabla-adelantos { margin-top: 16px; border: 1px solid #3f3f3f; border-radius: 8px; overflow: hidden; background: var(--bg-2); }
+  .tabla-adelantos table td, .tabla-adelantos table th { padding: 7px 10px; }
+  .tabla-adelantos td.num, .tabla-adelantos th.num { text-align: right; }
+  .tabla-adelantos tr.con-adelanto td { background: #1f3d2a; color: var(--ok-fg); }
+  .tabla-adelantos tfoot td { background: var(--bg-3); }
+  .quitar { background: transparent; border: 1px solid #7a4a4a; color: #ffb3b3; padding: 3px 8px; font-size: 12px; border-radius: 4px; cursor: pointer; }
+  .quitar:hover { background: #5a2a2a; }
   #btn-siguiente { display: none; background: var(--accent); border-color: var(--accent); color: #fff; }
   #btn-siguiente:hover:not(:disabled) { background: #3a7bc8; }
   .volver { display: inline-block; background: var(--btn); color: var(--fg); text-decoration: none; padding: 10px 16px; border-radius: 6px; font-weight: 600; border: 1px solid #4a4a4a; }
@@ -233,10 +264,28 @@
         <h2>Adelantos — próximamente</h2>
         <p>Esta sección todavía está en construcción.</p>
       </div>
-      <div class="contenido-seccion" id="contenido-adelantos"><!-- acá va el contenido de Adelantos --></div>
+      <div class="contenido-seccion" id="contenido-adelantos">
+        <div class="form-adelanto">
+          <div>
+            <label for="adelanto-empleado">Empleado</label>
+            <select id="adelanto-empleado"></select>
+          </div>
+          <div>
+            <label for="adelanto-monto">Monto del adelanto</label>
+            <div class="campo-plata"><span>$</span><input type="text" id="adelanto-monto" inputmode="decimal" placeholder="Ej: 20000" autocomplete="off"></div>
+          </div>
+          <button class="boton-flujo principal" id="btn-restar">➖ Restar adelanto</button>
+          <div id="adelanto-info"></div>
+        </div>
+        <div class="tabla-adelantos"><div class="tabla-scroll"><table>
+          <thead><tr><th>Empleado</th><th class="num">Horas</th><th class="num">Sueldo</th><th class="num">Adelanto</th><th class="num">A cobrar</th><th></th></tr></thead>
+          <tbody id="adelantos-filas"></tbody>
+          <tfoot id="adelantos-totales"></tfoot>
+        </table></div></div>
+      </div>
       <div class="acciones-flujo">
         <a class="boton-flujo" href="#/brie/liquidar">⬅ Volver a Liquidar</a>
-        <a class="boton-flujo principal" href="#/brie/mercaderia">Siguiente paso: Mercadería ➜</a>
+        <a class="boton-flujo principal" href="#/brie/mercaderia" title="Pasar a Mercadería (no hace falta que todos tengan adelanto)">Continuar ➜</a>
       </div>
     </div>
   </div>
@@ -287,6 +336,11 @@
 </header>
 
 <div id="pasos-liquidar" class="pasos"></div>
+<div id="panel-sueldo">
+  <label for="sueldo-hora">💲 Sueldo por hora<small>Todos los empleados cobran lo mismo</small></label>
+  <div class="campo-plata" id="campo-sueldo"><span>$</span><input type="text" id="sueldo-hora" inputmode="decimal" placeholder="Ej: 4500" autocomplete="off"></div>
+  <div id="total-sueldos"></div>
+</div>
 <div id="info">
   <div id="estado"></div>
   <div class="leyenda" id="leyenda"></div>
@@ -329,7 +383,7 @@ let pantallaActual = null;
 
 // Lo que va pasando de un paso al otro en BRIE (Liquidar → Adelantos → Mercadería).
 // Cada sección lee lo anterior y guarda su resultado acá.
-const flujo = { local: "", liquidacion: null, adelantos: null, mercaderia: null };
+const flujo = { local: "", liquidacion: null, sueldoHora: 0, adelantos: {}, mercaderia: null };
 let errorInicio = null;
 
 // ---------- Arranque de Python en el navegador ----------
@@ -378,7 +432,7 @@ async function leerArchivo(file) {
   ["btn-guardar", "btn-atras", "btn-limpiar", "solo-revisar", "busqueda", "btn-siguiente"].forEach(id => $(id).disabled = false);
   $("btn-siguiente").title = "";
   if (seccion === "brie") {   // un archivo nuevo reinicia el flujo de BRIE
-    Object.assign(flujo, { local: nombreBar, liquidacion: datos, adelantos: null, mercaderia: null });
+    Object.assign(flujo, { local: nombreBar, liquidacion: datos, adelantos: {}, mercaderia: null });
     dibujarPasos(1);
   }
   $("zona").style.display = "none";
@@ -425,7 +479,7 @@ function dibujar(lista) {
       <div class="titulo">
         <div><b><span class="id">${esc(e.id)}</span>${esc(e.nombre)} ${esc(e.apellido)}</b></div>
         <div class="chips">${chips(e)}</div>
-        <div class="total">Total: ${esc(e.total)} h · ${e.turnos} turnos</div>
+        <div class="total">Total: ${esc(e.total)} h · ${e.turnos} turnos${conSueldo() ? ` · <span class="sueldo">${pesos(sueldoDe(e))}</span>` : ""}</div>
       </div>
       <div class="tabla-scroll"><table>
         <thead><tr><th>Fecha</th><th>Hora</th><th class="num">Horas turno</th><th>Observación</th></tr></thead>
@@ -455,7 +509,7 @@ function guardar() {
   if (!lista.length) { mostrarAviso("No hay datos para guardar"); return; }
   try {
     const ruta = "/tmp/salida.xlsx";
-    web.exportar(JSON.stringify(lista.map(e => e.id)), ruta);
+    web.exportar(JSON.stringify(lista.map(e => e.id)), ruta, conSueldo() ? flujo.sueldoHora : 0);
     const blob = new Blob([py.FS.readFile(ruta)], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
@@ -471,7 +525,7 @@ function limpiar() {
   $("busqueda").value = ""; $("solo-revisar").checked = false; $("archivo").value = "";
   ["btn-guardar", "btn-atras", "btn-limpiar", "solo-revisar", "busqueda", "btn-siguiente"].forEach(id => $(id).disabled = true);
   $("btn-siguiente").title = "Primero cargá el archivo del reloj";
-  Object.assign(flujo, { local: "", liquidacion: null, adelantos: null, mercaderia: null });
+  Object.assign(flujo, { local: "", liquidacion: null, adelantos: {}, mercaderia: null });
   if (pantallaActual === "liquidar") dibujarPasos(seccion === "brie" ? 1 : null);
 }
 
@@ -530,7 +584,7 @@ document.addEventListener("drop", (e) => {
 // Poné ACTIVA: true cuando una sección tenga su contenido listo:
 // se quita el cartel "PRÓXIMAMENTE" del menú y se muestra su contenido.
 const SECCIONES_BRIE = {
-  adelantos:  { ACTIVA: false },
+  adelantos:  { ACTIVA: true },
   mercaderia: { ACTIVA: false },
 };
 function prepararSecciones() {
@@ -564,18 +618,129 @@ const aHoras = (min) => `${Math.floor(min / 60)}:${String(min % 60).padStart(2, 
 function mostrarPasoFlujo(id) {
   const pantalla = $("pantalla-" + id);
   const liq = flujo.liquidacion;
-  pantalla.querySelector(".sin-datos").style.display = liq ? "none" : "block";
-  pantalla.querySelector(".cuerpo").style.display = liq ? "block" : "none";
-  pantalla.querySelector(".contexto").innerHTML = !liq ? "" :
-    `Local: <b>${esc(flujo.local)}</b> · ${liq.empleados.length} empleados · ` +
-    `total liquidado <b>${aHoras(liq.empleados.reduce((a, e) => a + aMinutos(e.total), 0))} h</b>`;
+  const listo = liq && flujo.sueldoHora > 0;   // hace falta la liquidación y el sueldo por hora
+  const aviso = pantalla.querySelector(".sin-datos");
+  aviso.querySelector("h2").textContent = !liq ? "Primero hay que liquidar las horas" : "Falta el sueldo por hora";
+  aviso.querySelector("p").textContent = !liq ? "Este paso trabaja sobre el archivo ya liquidado."
+    : "Completá el sueldo por hora en Liquidar para calcular los sueldos.";
+  aviso.style.display = listo ? "none" : "block";
+  pantalla.querySelector(".cuerpo").style.display = listo ? "block" : "none";
+  if (!listo) { pantalla.querySelector(".contexto").innerHTML = ""; return; }
+  const totalMin = liq.empleados.reduce((a, e) => a + aMinutos(e.total), 0);
+  const totalSueldos = liq.empleados.reduce((a, e) => a + sueldoDe(e), 0);
+  const totalAdel = Object.values(flujo.adelantos).reduce((a, m) => a + m, 0);
+  pantalla.querySelector(".contexto").innerHTML =
+    `Local: <b>${esc(flujo.local)}</b> · ${liq.empleados.length} empleados · ${aHoras(totalMin)} h · ` +
+    `sueldo por hora <b>${pesos(flujo.sueldoHora)}</b> · sueldos <b>${pesos(totalSueldos)}</b>` +
+    (id === "mercaderia" ? ` · adelantos <b>${pesos(totalAdel)}</b> · a cobrar <b>${pesos(totalSueldos - totalAdel)}</b>` : "");
+  if (id === "adelantos") dibujarAdelantos();
 }
+
+// ---------- Sueldo por hora ----------
+// Acepta "4500", "4.500", "4500,50" o "4.500,50"
+function leerPlata(txt) {
+  let t = String(txt).trim().replace(/[$\s]/g, "");
+  if (!t) return 0;
+  if (t.includes(",")) t = t.replace(/\./g, "").replace(",", ".");
+  else if (/^\d{1,3}(\.\d{3})+$/.test(t)) t = t.replace(/\./g, "");
+  const n = Number(t);
+  return Number.isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : NaN;
+}
+const fmtPesos = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", minimumFractionDigits: 2 });
+const pesos = (n) => fmtPesos.format(n || 0);
+const conSueldo = () => seccion === "brie" && flujo.sueldoHora > 0;
+const sueldoDe = (e) => Math.round(aMinutos(e.total) / 60 * flujo.sueldoHora * 100) / 100;
+
+function actualizarSueldos() {
+  const v = leerPlata($("sueldo-hora").value);
+  flujo.sueldoHora = Number.isNaN(v) ? 0 : v;
+  $("campo-sueldo").classList.toggle("falta", Number.isNaN(v));
+  const lista = datos ? datos.empleados : [];
+  $("total-sueldos").innerHTML = Number.isNaN(v) ? "Monto inválido" :
+    !flujo.sueldoHora ? "Completalo para calcular el sueldo de cada empleado" :
+    lista.length ? `Total a liquidar: <b>${pesos(lista.reduce((a, e) => a + sueldoDe(e), 0))}</b>` : "";
+  try { localStorage.setItem("sueldoHora", $("sueldo-hora").value); } catch (e) {}
+  if (flujo.sueldoHora > 0 && $("aviso").textContent.startsWith("Completá el sueldo")) ocultarAviso();
+  if (datos) aplicarFiltros();
+}
+$("sueldo-hora").addEventListener("input", actualizarSueldos);
+try { $("sueldo-hora").value = localStorage.getItem("sueldoHora") || ""; } catch (e) {}
 
 // Liquidar → Adelantos (la liquidación ya quedó guardada en el flujo al procesar el archivo)
 function irASiguientePaso() {
   if (!flujo.liquidacion) return;
+  if (!(flujo.sueldoHora > 0)) {
+    mostrarAviso("Completá el sueldo por hora para poder pasar a Adelantos.");
+    $("campo-sueldo").classList.add("falta");
+    $("sueldo-hora").focus();
+    window.scrollTo(0, 0);
+    return;
+  }
+  ocultarAviso();
   location.hash = "#/brie/adelantos";
 }
+
+// ---------- Adelantos ----------
+function nombreDe(e) { return `${e.nombre} ${e.apellido}`.trim(); }
+
+function dibujarAdelantos() {
+  const emps = flujo.liquidacion.empleados;
+  const sel = $("adelanto-empleado");
+  const elegido = sel.value;
+  sel.innerHTML = `<option value="">— Elegí un empleado —</option>` + emps.map(e => {
+    const tiene = e.id in flujo.adelantos;
+    return `<option value="${esc(e.id)}"${tiene ? ' class="con-adelanto"' : ""}>${tiene ? "✓ " : ""}${esc(nombreDe(e))} (${esc(e.id)})${tiene ? " — adelanto " + pesos(flujo.adelantos[e.id]) : ""}</option>`;
+  }).join("");
+  sel.value = emps.some(e => e.id === elegido) ? elegido : "";
+
+  let tS = 0, tA = 0;
+  $("adelantos-filas").innerHTML = emps.map(e => {
+    const s = sueldoDe(e), a = flujo.adelantos[e.id] || 0, tiene = e.id in flujo.adelantos;
+    tS += s; tA += a;
+    return `<tr class="${tiene ? "con-adelanto" : ""}"><td>${tiene ? "✓ " : ""}${esc(nombreDe(e))} <span style="color:var(--fg-dim)">(${esc(e.id)})</span></td>
+      <td class="num">${esc(e.total)}</td><td class="num">${pesos(s)}</td><td class="num">${tiene ? pesos(a) : "—"}</td>
+      <td class="num"><b>${pesos(s - a)}</b></td>
+      <td>${tiene ? `<button class="quitar" data-id="${esc(e.id)}" title="Por si te equivocaste">Deshacer</button>` : ""}</td></tr>`;
+  }).join("");
+  $("adelantos-totales").innerHTML = `<tr><td>Total</td><td></td><td class="num">${pesos(tS)}</td><td class="num">${pesos(tA)}</td><td class="num">${pesos(tS - tA)}</td><td></td></tr>`;
+  mostrarInfoEmpleado();
+}
+
+function infoAdelanto(texto, clase = "") { $("adelanto-info").className = clase; $("adelanto-info").innerHTML = texto; }
+
+function mostrarInfoEmpleado() {
+  const e = flujo.liquidacion.empleados.find(x => x.id === $("adelanto-empleado").value);
+  const yaTiene = e && e.id in flujo.adelantos;
+  $("btn-restar").disabled = !e || yaTiene;
+  $("adelanto-monto").disabled = !e || yaTiene;
+  if (!e) return infoAdelanto("Elegí el empleado que pidió adelanto y escribí el monto.");
+  if (yaTiene) return infoAdelanto(`✓ A <b>${esc(nombreDe(e))}</b> ya se le restó un adelanto de <b>${pesos(flujo.adelantos[e.id])}</b>. ` +
+    `Si te equivocaste, tocá “Deshacer” en la tabla.`, "ok");
+  infoAdelanto(`<b>${esc(nombreDe(e))}</b>: ${esc(e.total)} h · sueldo <b>${pesos(sueldoDe(e))}</b>`);
+}
+
+function restarAdelanto() {
+  const e = flujo.liquidacion.empleados.find(x => x.id === $("adelanto-empleado").value);
+  if (!e || e.id in flujo.adelantos) return;
+  const monto = leerPlata($("adelanto-monto").value);
+  if (!monto || Number.isNaN(monto)) { infoAdelanto("Escribí un monto válido, por ejemplo 20000 o 20.000,50", "error"); $("adelanto-monto").focus(); return; }
+  if (monto > sueldoDe(e)) { infoAdelanto(`El adelanto (${pesos(monto)}) es mayor que el sueldo de ${esc(nombreDe(e))} (${pesos(sueldoDe(e))}). Revisá el monto.`, "error"); return; }
+  flujo.adelantos[e.id] = monto;
+  $("adelanto-monto").value = "";
+  mostrarPasoFlujo("adelantos");   // redibuja lista (queda en verde), tabla y totales
+  infoAdelanto(`✓ Listo: a <b>${esc(nombreDe(e))}</b> se le restaron <b>${pesos(monto)}</b>. Le queda a cobrar <b>${pesos(sueldoDe(e) - monto)}</b>.`, "ok");
+}
+
+$("adelanto-empleado").addEventListener("change", () => { $("adelanto-monto").value = ""; mostrarInfoEmpleado(); if (!$("adelanto-monto").disabled) $("adelanto-monto").focus(); });
+$("btn-restar").addEventListener("click", restarAdelanto);
+$("adelanto-monto").addEventListener("keydown", (ev) => { if (ev.key === "Enter") restarAdelanto(); });
+$("adelantos-filas").addEventListener("click", (ev) => {
+  const b = ev.target.closest(".quitar");
+  if (!b) return;
+  delete flujo.adelantos[b.dataset.id];
+  mostrarPasoFlujo("adelantos");
+});
+
 $("btn-siguiente").addEventListener("click", irASiguientePaso);
 
 // ---------- Navegación entre menús (#/bares, #/brie/liquidar, ...) ----------
@@ -614,6 +779,8 @@ function navegar() {
   }
   dibujarPasos(ruta.paso || null);
   $("btn-siguiente").style.display = ruta.paso === 1 ? "inline-block" : "none";
+  $("panel-sueldo").classList.toggle("visible", ruta.paso === 1);
+  if (ruta.paso === 1) actualizarSueldos();
   if (ruta.pantalla === "adelantos" || ruta.pantalla === "mercaderia") mostrarPasoFlujo(ruta.pantalla);
   window.scrollTo(0, 0);
 }

@@ -60,7 +60,12 @@ def cargar(ruta):
     }, ensure_ascii=False)
 
 
-def exportar(ids_json, ruta):
-    """Genera el Excel solo con los empleados visibles (respeta búsqueda y filtros)."""
+def exportar(ids_json, ruta, sueldo_hora=0, adelantos_json=None):
+    """
+    Genera el Excel solo con los empleados visibles (respeta búsqueda y filtros).
+    sueldo_hora > 0 agrega Sueldo al Resumen; adelantos_json ({id: monto}) agrega Adelanto y A cobrar.
+    """
     ids = set(json.loads(ids_json))
-    L.exportar_excel(_df[_df["id"].astype(str).isin(ids)], ruta)
+    adelantos = json.loads(adelantos_json) if adelantos_json else None
+    L.exportar_excel(_df[_df["id"].astype(str).isin(ids)], ruta,
+                     sueldo_hora=float(sueldo_hora) or None, adelantos=adelantos)

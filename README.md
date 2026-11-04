@@ -7,7 +7,9 @@ Procesa el archivo que exporta el reloj de fichadas, calcula las horas de cada t
 ## Menú
 
 - **Bares** → liquidar horas.
-- **BRIE** → flujo en 3 pasos: **Liquidar → Adelantos → Mercadería**. Desde Liquidar, el botón "Siguiente paso" lleva el archivo ya procesado a Adelantos, y de ahí a Mercadería (estas dos, en construcción).
+- **BRIE** → flujo en 3 pasos: **Liquidar → Adelantos → Mercadería**. Desde Liquidar, el botón "Siguiente paso" lleva el archivo ya procesado a Adelantos, y de ahí a Mercadería (en construcción).
+  - **Liquidar:** además del archivo, se completa el **sueldo por hora** (igual para todos). Calcula el sueldo de cada empleado con sus horas totales y lo agrega al Excel (hoja Resumen).
+  - **Adelantos:** se elige el empleado en un desplegable, se escribe el monto y se resta. El empleado queda en verde para no restarlo dos veces ("Deshacer" por si hubo un error). Con "Continuar" se pasa a Mercadería; no hace falta que todos tengan adelanto.
 
 ## Qué hace la liquidación
 
