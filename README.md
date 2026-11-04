@@ -4,7 +4,12 @@ Procesa el archivo que exporta el reloj de fichadas, calcula las horas de cada t
 
 **Versión web:** https://alejandroflorido.github.io/procesador-horas/
 
-## Qué hace
+## Menú
+
+- **Bares** → liquidar horas.
+- **BRIE** → Liquidar (horas), Adelantos y Mercadería (estas dos, en construcción).
+
+## Qué hace la liquidación
 
 - Separa ID, nombre, apellido, fecha y hora.
 - Empareja entrada y salida usando **fecha + hora**, así que los turnos que pasan la medianoche (ej. 19:00 → 02:00) se calculan bien.

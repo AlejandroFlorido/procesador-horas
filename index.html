@@ -101,6 +101,34 @@
   .caja .principal { background: var(--accent); border-color: var(--accent); color: #fff; }
   .caja .principal:hover { background: #3a7bc8; }
   #bar-actual { color: var(--fg); font-weight: 700; }
+  /* ---------- Menú ---------- */
+  #nav { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 12px 16px; background: var(--bg-2); border-bottom: 1px solid var(--linea); }
+  #nav .marca { font-weight: 700; font-size: 15px; color: var(--fg); text-decoration: none; margin-right: 6px; }
+  #migas { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 14px; color: var(--fg-dim); }
+  #migas a { color: var(--accent); text-decoration: none; font-weight: 600; }
+  #migas a:hover { text-decoration: underline; }
+  #migas .sep { color: #555; }
+  .pantalla { display: none; }
+  .pantalla.activa { display: block; }
+  .menu { padding: 28px 16px; max-width: 900px; margin: 0 auto; }
+  .menu h2 { margin: 0 0 4px; font-size: 22px; }
+  .menu > p { margin: 0 0 22px; color: var(--fg-dim); }
+  .opciones { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
+  .opcion {
+    display: block; text-decoration: none; color: var(--fg); background: var(--bg-3);
+    border: 2px solid #3f3f3f; border-radius: 10px; padding: 22px 20px; transition: border-color .15s, transform .15s, background .15s;
+  }
+  .opcion:hover, .opcion:focus-visible { border-color: var(--accent); background: #2a2f36; transform: translateY(-2px); outline: none; }
+  .opcion .icono { font-size: 34px; line-height: 1; display: block; margin-bottom: 12px; }
+  .opcion b { display: block; font-size: 19px; margin-bottom: 4px; }
+  .opcion span.desc { color: var(--fg-dim); font-size: 13.5px; }
+  .opcion .pronto { display: inline-block; margin-top: 10px; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 3px; background: #3a3a3a; color: #bbb; }
+  .proximamente { text-align: center; padding: 60px 16px; }
+  .proximamente .icono { font-size: 48px; }
+  .proximamente h2 { margin: 12px 0 6px; }
+  .proximamente p { color: var(--fg-dim); margin: 0 0 22px; }
+  .volver { display: inline-block; background: var(--btn); color: var(--fg); text-decoration: none; padding: 10px 16px; border-radius: 6px; font-weight: 600; border: 1px solid #4a4a4a; }
+  .volver:hover { background: var(--btn-hover); }
   @media (max-width: 640px) {
     input[type=search] { width: 100%; }
     .barra.busqueda { width: 100%; }
@@ -109,10 +137,69 @@
 </style>
 </head>
 <body>
-<div id="cargando"><div><div class="spinner"></div><div id="cargando-texto">Cargando el motor de Python…<br><small>(solo la primera vez tarda unos segundos)</small></div></div></div>
+<div id="cargando" style="display:none"><div><div class="spinner"></div><div id="cargando-texto">Cargando el motor de Python…<br><small>(solo la primera vez tarda unos segundos)</small></div></div></div>
 
+<nav id="nav">
+  <a class="marca" href="#/">🏠 Procesador</a>
+  <div id="migas"></div>
+</nav>
+
+<!-- ===== Inicio: Bares / BRIE ===== -->
+<section class="pantalla" id="pantalla-inicio">
+  <div class="menu">
+    <h2>¿Para qué negocio es?</h2>
+    <p>Elegí una opción para empezar.</p>
+    <div class="opciones">
+      <a class="opcion" href="#/bares">
+        <span class="icono">🍺</span><b>Bares</b>
+        <span class="desc">Liquidar las horas del personal de los bares.</span>
+      </a>
+      <a class="opcion" href="#/brie">
+        <span class="icono">🛒</span><b>BRIE</b>
+        <span class="desc">Liquidar horas, adelantos y mercadería.</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Menú BRIE ===== -->
+<section class="pantalla" id="pantalla-brie">
+  <div class="menu">
+    <h2>BRIE</h2>
+    <p>¿Qué querés hacer?</p>
+    <div class="opciones">
+      <a class="opcion" href="#/brie/liquidar">
+        <span class="icono">🕒</span><b>Liquidar</b>
+        <span class="desc">Procesar el archivo del reloj y calcular las horas.</span>
+      </a>
+      <a class="opcion" href="#/brie/adelantos">
+        <span class="icono">💵</span><b>Adelantos</b>
+        <span class="desc">Adelantos de sueldo del personal.</span>
+        <span class="pronto">PRÓXIMAMENTE</span>
+      </a>
+      <a class="opcion" href="#/brie/mercaderia">
+        <span class="icono">📦</span><b>Mercadería</b>
+        <span class="desc">Mercadería retirada por el personal.</span>
+        <span class="pronto">PRÓXIMAMENTE</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Secciones todavía no disponibles ===== -->
+<section class="pantalla" id="pantalla-proximamente">
+  <div class="proximamente">
+    <div class="icono" id="pronto-icono">🚧</div>
+    <h2 id="pronto-titulo">Próximamente</h2>
+    <p>Esta sección todavía está en construcción.</p>
+    <a class="volver" href="#/brie">⬅ Volver a BRIE</a>
+  </div>
+</section>
+
+<!-- ===== Liquidar horas (Bares y BRIE) ===== -->
+<section class="pantalla" id="pantalla-liquidar">
 <header>
-  <h1>Procesador de Horas <span>reloj de fichadas</span></h1>
+  <h1><span id="titulo-herramienta" style="margin:0;color:inherit;font-size:inherit;font-weight:600">Liquidar horas</span> <span>reloj de fichadas</span></h1>
   <div class="barra">
     <label class="boton" for="archivo">📂 Select File</label>
     <input type="file" id="archivo" accept=".xlsx,.csv" hidden>
@@ -141,11 +228,13 @@
   <div id="vista"></div>
   <div id="vacio">Sin resultados</div>
 </main>
+<footer>Las horas se calculan con fecha + hora de entrada y salida, así que los turnos que pasan la medianoche se cuentan bien.</footer>
+</section>
 
 <div id="modal" role="dialog" aria-modal="true" aria-labelledby="modal-titulo">
   <div class="caja">
     <h2 id="modal-titulo">¿De qué bar es este archivo?</h2>
-    <p>Escribí el nombre del bar. Con ese nombre se va a descargar el Excel.</p>
+    <p id="modal-texto">Escribí el nombre del bar. Con ese nombre se va a descargar el Excel.</p>
     <div class="archivo-elegido" id="modal-archivo"></div>
     <input type="text" id="nombre-bar" placeholder="Ej: BRIE Centro" autocomplete="off" maxlength="60">
     <div class="error" id="modal-error"></div>
@@ -156,13 +245,13 @@
   </div>
 </div>
 
-<footer>Las horas se calculan con fecha + hora de entrada y salida, así que los turnos que pasan la medianoche se cuentan bien.</footer>
-
 <script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
 let py = null, web = null;
 let datos = null, nombreArchivo = "horas", nombreBar = "", archivoPendiente = null;
+let seccion = null;   // "bares" o "brie" mientras se está liquidando
+let errorInicio = null;
 
 // ---------- Arranque de Python en el navegador ----------
 async function iniciar() {
@@ -185,6 +274,7 @@ async function iniciar() {
     web = py.pyimport("web");
     $("cargando").style.display = "none";
   } catch (e) {
+    errorInicio = e.message;
     $("cargando-texto").innerHTML = `No se pudo iniciar el programa.<br><small>${e.message}</small>`;
   }
 }
@@ -302,6 +392,11 @@ function pedirNombreBar(file) {
   if (!web) return;
   if (!/\.(csv|xlsx)$/i.test(file.name)) { mostrarAviso("Solo se aceptan archivos .csv o .xlsx"); return; }
   archivoPendiente = file;
+  const brie = seccion === "brie";
+  $("modal-titulo").textContent = brie ? "¿De qué local BRIE es este archivo?" : "¿De qué bar es este archivo?";
+  $("modal-texto").textContent = (brie ? "Escribí el nombre del local." : "Escribí el nombre del bar.") +
+    " Con ese nombre se va a descargar el Excel.";
+  $("nombre-bar").placeholder = brie ? "Ej: BRIE Centro" : "Ej: Chale";
   $("modal-archivo").textContent = "Archivo: " + file.name;
   $("modal-error").textContent = "";
   $("nombre-bar").value = "";
@@ -338,9 +433,57 @@ $("busqueda").addEventListener("input", aplicarFiltros);
 // Arrastrar y soltar en cualquier parte de la página
 ["dragenter", "dragover"].forEach(ev => document.addEventListener(ev, (e) => { e.preventDefault(); $("zona").classList.add("encima"); }));
 ["dragleave", "drop"].forEach(ev => document.addEventListener(ev, (e) => { e.preventDefault(); $("zona").classList.remove("encima"); }));
-document.addEventListener("drop", (e) => { const f = e.dataTransfer.files[0]; if (f) pedirNombreBar(f); });
+document.addEventListener("drop", (e) => {
+  const f = e.dataTransfer.files[0];
+  if (f && seccion) pedirNombreBar(f);
+});
 
-iniciar();
+// ---------- Navegación entre menús (#/bares, #/brie/liquidar, ...) ----------
+const RUTAS = {
+  "/":               { pantalla: "inicio", migas: [] },
+  "/bares":          { pantalla: "liquidar", seccion: "bares", titulo: "Liquidar horas · Bares",
+                       migas: [["Bares", null]] },
+  "/brie":           { pantalla: "brie", migas: [["BRIE", null]] },
+  "/brie/liquidar":  { pantalla: "liquidar", seccion: "brie", titulo: "Liquidar horas · BRIE",
+                       migas: [["BRIE", "#/brie"], ["Liquidar", null]] },
+  "/brie/adelantos": { pantalla: "proximamente", icono: "💵", titulo: "Adelantos",
+                       migas: [["BRIE", "#/brie"], ["Adelantos", null]] },
+  "/brie/mercaderia":{ pantalla: "proximamente", icono: "📦", titulo: "Mercadería",
+                       migas: [["BRIE", "#/brie"], ["Mercadería", null]] },
+};
+
+function navegar() {
+  const ruta = RUTAS[location.hash.replace(/^#/, "") || "/"] || RUTAS["/"];
+  // Al cambiar de Bares a BRIE (o salir) se limpia lo cargado, para no mezclar archivos
+  if ((ruta.seccion || null) !== seccion && datos) limpiar();
+  cancelarNombreBar();
+  seccion = ruta.seccion || null;
+
+  document.querySelectorAll(".pantalla").forEach(p => p.classList.remove("activa"));
+  $("pantalla-" + ruta.pantalla).classList.add("activa");
+  $("migas").innerHTML = ruta.migas.map(([t, href]) =>
+    `<span class="sep">›</span>` + (href ? `<a href="${href}">${t}</a>` : `<span>${t}</span>`)).join("");
+
+  if (ruta.pantalla === "liquidar") {
+    $("titulo-herramienta").textContent = ruta.titulo;
+    // Si Python todavía está cargando, mostramos la ruedita solo acá
+    if (!web) $("cargando").style.display = "flex";
+  } else {
+    $("cargando").style.display = "none";
+  }
+  if (ruta.pantalla === "proximamente") {
+    $("pronto-icono").textContent = ruta.icono;
+    $("pronto-titulo").textContent = ruta.titulo + " — próximamente";
+  }
+  window.scrollTo(0, 0);
+}
+window.addEventListener("hashchange", navegar);
+navegar();
+
+// Python se carga en segundo plano mientras la persona elige en el menú
+iniciar().then(() => {
+  if (web && seccion) $("cargando").style.display = "none";
+});
 </script>
 </body>
 </html>
