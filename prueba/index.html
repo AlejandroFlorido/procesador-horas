@@ -1,0 +1,1093 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Procesador de Horas (prueba)</title>
+<meta name="description" content="Procesa el archivo del reloj de fichadas, calcula horas por turno y detecta errores. Todo corre en el navegador.">
+<style>
+  :root {
+    --bg: #2b2b2b; --bg-2: #1e1e1e; --bg-3: #252526; --fg: #e0e0e0; --fg-dim: #9a9a9a;
+    --accent: #4a90e2; --btn: #3c3f41; --btn-hover: #505050; --linea: #3c3f41;
+    --ext-bg: #5a2a2a; --ext-fg: #ffb3b3;
+    --sos-bg: #a01818; --sos-fg: #ffffff;
+    --cor-bg: #5a4a1a; --cor-fg: #ffe699;
+    --sin-bg: #7a4310; --sin-fg: #ffd8b0;
+    --rep-fg: #7a7a7a;
+    --ok-bg: #1f3d2a; --ok-fg: #9fe0b4;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.4 "Segoe UI", system-ui, sans-serif; }
+  header { padding: 16px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+  h1 { font-size: 17px; margin: 0; font-weight: 600; }
+  h1 span { color: var(--fg-dim); font-weight: 400; font-size: 13px; margin-left: 6px; }
+  .barra { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  button, .boton {
+    background: var(--btn); color: var(--fg); border: 1px solid #4a4a4a; border-radius: 4px;
+    padding: 7px 12px; font: 600 13px "Segoe UI", system-ui, sans-serif; cursor: pointer;
+  }
+  button:hover:not(:disabled), .boton:hover { background: var(--btn-hover); color: #fff; }
+  button:active:not(:disabled) { background: var(--accent); }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  input[type=search] {
+    background: var(--bg-2); color: var(--fg); border: 1px solid #4a4a4a; border-radius: 4px;
+    padding: 7px 10px; width: 230px; font: 13px "Segoe UI", system-ui, sans-serif;
+  }
+  input[type=search]:focus { outline: none; border-color: var(--accent); }
+  label.check { display: flex; gap: 6px; align-items: center; cursor: pointer; user-select: none; }
+  #info { padding: 0 16px 8px; display: flex; flex-wrap: wrap; gap: 8px 16px; justify-content: space-between; align-items: center; }
+  #estado { color: #9cdcfe; font-size: 12.5px; }
+  .leyenda { display: flex; flex-wrap: wrap; gap: 4px; }
+  .leyenda span { font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 3px; }
+  main { padding: 0 16px 24px; }
+  #zona {
+    border: 2px dashed #4a4a4a; border-radius: 8px; background: var(--bg-2);
+    padding: 48px 16px; text-align: center; color: var(--fg-dim); transition: border-color .15s, background .15s;
+  }
+  #zona.encima { border-color: var(--accent); background: #1a2533; color: var(--fg); }
+  #zona strong { color: var(--fg); display: block; font-size: 16px; margin-bottom: 6px; }
+  #zona small { display: block; margin-top: 14px; font-size: 12px; }
+  #vista { display: none; }
+  .empleado { border: 2px solid var(--accent); border-radius: 6px; margin-bottom: 14px; background: var(--bg-2); overflow: hidden; }
+  .empleado.revisar { border-color: #c94a4a; }
+  .titulo {
+    display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; justify-content: space-between;
+    padding: 7px 12px; background: var(--bg-3); border-bottom: 1px solid var(--linea);
+  }
+  .titulo b { font-size: 14px; }
+  .titulo .id { color: var(--accent); margin-right: 6px; }
+  .titulo .total { font-family: Consolas, monospace; font-weight: 700; font-size: 14px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 4px; }
+  .chip { font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 3px; }
+  .tabla-scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font: 13px Consolas, "Courier New", monospace; }
+  th { text-align: left; font-weight: 700; color: var(--accent); padding: 5px 10px; border-bottom: 1px solid var(--linea); white-space: nowrap; }
+  td { padding: 4px 10px; border-bottom: 1px solid #2d2d2d; white-space: nowrap; }
+  td.obs { white-space: normal; min-width: 220px; }
+  td.num { text-align: right; }
+  tr:last-child td { border-bottom: none; }
+  tr.extendido td { background: var(--ext-bg); color: var(--ext-fg); }
+  tr.sospechoso td { background: var(--sos-bg); color: var(--sos-fg); font-weight: 700; }
+  tr.corto td { background: var(--cor-bg); color: var(--cor-fg); }
+  tr.sin_pareja td { background: var(--sin-bg); color: var(--sin-fg); font-weight: 700; }
+  tr.repetida td { color: var(--rep-fg); text-decoration: line-through; }
+  tr.repetida td.obs { text-decoration: none; font-style: italic; }
+  tfoot td { border-top: 1px solid var(--linea); font-weight: 700; }
+  .ext { background: var(--ext-bg); color: var(--ext-fg); }
+  .sos { background: var(--sos-bg); color: var(--sos-fg); }
+  .cor { background: var(--cor-bg); color: var(--cor-fg); }
+  .sin { background: var(--sin-bg); color: var(--sin-fg); }
+  .rep { background: var(--bg-2); color: var(--rep-fg); border: 1px solid #444; }
+  .okc { background: var(--ok-bg); color: var(--ok-fg); }
+  #vacio { display: none; color: var(--fg-dim); padding: 30px; text-align: center; }
+  #cargando { position: fixed; inset: 0; background: rgba(20,20,20,.85); display: flex; align-items: center; justify-content: center; z-index: 10; }
+  #cargando div { text-align: center; }
+  .spinner { width: 34px; height: 34px; border: 3px solid #444; border-top-color: var(--accent); border-radius: 50%; margin: 0 auto 12px; animation: girar .8s linear infinite; }
+  @keyframes girar { to { transform: rotate(360deg); } }
+  #aviso { display: none; margin: 0 16px 10px; padding: 10px 12px; border-radius: 4px; background: var(--sin-bg); color: var(--sin-fg); font-size: 13px; white-space: pre-wrap; }
+  footer { color: var(--fg-dim); font-size: 12px; padding: 0 16px 20px; }
+  /* Ventana para el nombre del bar */
+  #modal { position: fixed; inset: 0; background: rgba(10,10,10,.75); display: none; align-items: center; justify-content: center; z-index: 20; padding: 16px; }
+  #modal.abierto { display: flex; }
+  .caja { background: var(--bg-3); border: 2px solid var(--accent); border-radius: 10px; padding: 24px; width: 100%; max-width: 440px; }
+  .caja h2 { margin: 0 0 6px; font-size: 19px; }
+  .caja p { margin: 0 0 16px; color: var(--fg-dim); font-size: 13.5px; }
+  .caja .archivo-elegido { color: #9cdcfe; font-size: 13px; margin-bottom: 14px; word-break: break-all; }
+  .caja input { width: 100%; font-size: 18px; padding: 12px; background: var(--bg-2); color: var(--fg); border: 2px solid #4a4a4a; border-radius: 6px; }
+  .caja input:focus { outline: none; border-color: var(--accent); }
+  .caja .error { color: #ff8a8a; font-size: 13px; min-height: 18px; margin-top: 6px; }
+  .caja .acciones { display: flex; gap: 10px; justify-content: flex-end; margin-top: 12px; }
+  .caja .acciones button { padding: 11px 18px; font-size: 15px; }
+  .caja .principal { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .caja .principal:hover { background: #3a7bc8; }
+  #bar-actual { color: var(--fg); font-weight: 700; }
+  /* ---------- Menú ---------- */
+  #nav { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 12px 16px; background: var(--bg-2); border-bottom: 1px solid var(--linea); }
+  #nav .marca { font-weight: 700; font-size: 15px; color: var(--fg); text-decoration: none; margin-right: 6px; }
+  #migas { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 14px; color: var(--fg-dim); }
+  #migas a { color: var(--accent); text-decoration: none; font-weight: 600; }
+  #migas a:hover { text-decoration: underline; }
+  #migas .sep { color: #555; }
+  .pantalla { display: none; }
+  .pantalla.activa { display: block; }
+  .menu { padding: 28px 16px; max-width: 900px; margin: 0 auto; }
+  .menu h2 { margin: 0 0 4px; font-size: 22px; }
+  .menu > p { margin: 0 0 22px; color: var(--fg-dim); }
+  .opciones { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
+  .opcion {
+    display: block; text-decoration: none; color: var(--fg); background: var(--bg-3);
+    border: 2px solid #3f3f3f; border-radius: 10px; padding: 22px 20px; transition: border-color .15s, transform .15s, background .15s;
+  }
+  .opcion:hover, .opcion:focus-visible { border-color: var(--accent); background: #2a2f36; transform: translateY(-2px); outline: none; }
+  .opcion .icono { font-size: 34px; line-height: 1; display: block; margin-bottom: 12px; }
+  .opcion b { display: block; font-size: 19px; margin-bottom: 4px; }
+  .opcion span.desc { color: var(--fg-dim); font-size: 13.5px; }
+  .opcion .pronto { display: inline-block; margin-top: 10px; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 3px; background: #3a3a3a; color: #bbb; }
+  .proximamente { text-align: center; padding: 60px 16px; }
+  .proximamente .icono { font-size: 48px; }
+  .proximamente h2 { margin: 12px 0 6px; }
+  .proximamente p { color: var(--fg-dim); margin: 0 0 22px; }
+  /* ---------- Flujo BRIE: Liquidar → Adelantos → Mercadería ---------- */
+  .pasos { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+  .pasos .paso { display: flex; align-items: center; gap: 7px; padding: 5px 12px 5px 6px; border-radius: 20px; background: var(--bg-2); border: 1px solid #3f3f3f; color: var(--fg-dim); font-size: 13px; font-weight: 600; text-decoration: none; }
+  .pasos .paso .n { width: 22px; height: 22px; border-radius: 50%; background: #3a3a3a; color: #ccc; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+  .pasos .paso.hecho { color: var(--ok-fg); border-color: #2f6b44; }
+  .pasos .paso.hecho .n { background: #2f6b44; color: #fff; }
+  .pasos .paso.actual { color: #fff; border-color: var(--accent); background: #1a2533; }
+  .pasos .paso.actual .n { background: var(--accent); color: #fff; }
+  .pasos .flecha { color: #555; }
+  #pasos-liquidar { padding: 0 16px 10px; }
+  #pasos-liquidar:empty { display: none; }
+  .flujo { max-width: 900px; margin: 0 auto; padding: 20px 16px 30px; }
+  .contexto { margin: 16px 0; padding: 12px 14px; border-radius: 8px; background: var(--bg-3); border: 1px solid #3f3f3f; font-size: 14px; }
+  .contexto b { color: #fff; }
+  .contexto:empty { display: none; }
+  .sin-datos { text-align: center; padding: 40px 16px; }
+  .sin-datos .icono { font-size: 44px; }
+  .sin-datos h2 { margin: 10px 0 6px; }
+  .sin-datos p { color: var(--fg-dim); margin: 0 0 20px; }
+  .flujo .proximamente { padding: 36px 16px 20px; }
+  .acciones-flujo { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--linea); }
+  .boton-flujo { display: inline-block; text-decoration: none; background: var(--btn); color: var(--fg); border: 1px solid #4a4a4a; border-radius: 6px; padding: 11px 18px; font: 600 15px "Segoe UI", system-ui, sans-serif; cursor: pointer; }
+  .boton-flujo:hover:not(:disabled) { background: var(--btn-hover); color: #fff; }
+  .boton-flujo.principal { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .boton-flujo.principal:hover:not(:disabled) { background: #3a7bc8; }
+  .boton-flujo:disabled { opacity: .45; cursor: not-allowed; }
+  /* Sueldo por hora (BRIE › Liquidar) */
+  #panel-sueldo { display: none; margin: 0 16px 10px; padding: 12px 14px; border-radius: 8px; background: var(--bg-3); border: 1px solid #3f3f3f; }
+  #panel-sueldo.visible { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+  #panel-sueldo label { font-weight: 700; }
+  #panel-sueldo small { color: var(--fg-dim); font-weight: 400; display: block; }
+  .campo-plata { display: flex; align-items: center; background: var(--bg-2); border: 2px solid #4a4a4a; border-radius: 6px; }
+  .campo-plata:focus-within { border-color: var(--accent); }
+  .campo-plata.falta { border-color: #e06c6c; }
+  .campo-plata span { padding: 0 4px 0 10px; color: var(--fg-dim); font-weight: 700; }
+  .campo-plata input { background: transparent; border: none; color: var(--fg); font-size: 17px; padding: 9px 10px 9px 2px; width: 150px; outline: none; }
+  #total-sueldos { color: #9cdcfe; font-size: 13.5px; }
+  .titulo .sueldo { color: var(--ok-fg); font-weight: 700; font-family: Consolas, monospace; }
+  /* Adelantos */
+  .form-adelanto { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto; gap: 10px; align-items: end; background: var(--bg-3); border: 1px solid #3f3f3f; border-radius: 8px; padding: 14px; }
+  .form-adelanto label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 5px; }
+  .form-adelanto select { width: 100%; font-size: 15px; padding: 10px; background: var(--bg-2); color: var(--fg); border: 2px solid #4a4a4a; border-radius: 6px; }
+  .form-adelanto select:focus { outline: none; border-color: var(--accent); }
+  .form-adelanto .campo-plata input { width: 100%; }
+  .form-adelanto option.con-adelanto { color: #2e9e57; background: #e7f6ec; font-weight: 700; }
+  #adelanto-info { grid-column: 1 / -1; font-size: 13.5px; color: var(--fg-dim); min-height: 19px; }
+  #adelanto-info.error { color: #ff8a8a; }
+  #adelanto-info.ok { color: var(--ok-fg); }
+  #adelanto-info.alerta { color: #ffe699; background: #5a4a1a; padding: 8px 10px; border-radius: 5px; }
+  .form-adelanto option.negativo { color: #7f6000; background: #fff2b3; font-weight: 700; }
+  .tabla-adelantos tr.negativo td { background: #5a4a1a; color: #ffe699; }
+  #adelanto-info b { color: var(--fg); }
+  @media (max-width: 640px) { .form-adelanto { grid-template-columns: 1fr; } }
+  .tabla-adelantos { margin-top: 16px; border: 1px solid #3f3f3f; border-radius: 8px; overflow: hidden; background: var(--bg-2); }
+  .tabla-adelantos table td, .tabla-adelantos table th { padding: 7px 10px; }
+  .tabla-adelantos td.num, .tabla-adelantos th.num { text-align: right; }
+  .tabla-adelantos tr.con-adelanto td { background: #1f3d2a; color: var(--ok-fg); }
+  .tabla-adelantos tfoot td { background: var(--bg-3); }
+  .quitar { background: transparent; border: 1px solid #7a4a4a; color: #ffb3b3; padding: 3px 8px; font-size: 12px; border-radius: 4px; cursor: pointer; }
+  .quitar:hover { background: #5a2a2a; }
+  /* Mercadería */
+  .merc-archivo { background: var(--bg-3); border: 1px solid #3f3f3f; border-radius: 8px; padding: 14px; margin-bottom: 14px; display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; }
+  .merc-archivo.vacio { border: 2px dashed #4a4a4a; justify-content: center; text-align: center; padding: 28px 16px; flex-direction: column; }
+  .merc-archivo.vacio.encima { border-color: var(--accent); background: #1a2533; }
+  .merc-archivo .detalle { font-size: 13.5px; }
+  .merc-archivo .detalle b { color: #fff; }
+  .merc-archivo .detalle small { color: var(--fg-dim); display: block; margin-top: 2px; }
+  .merc-avisos { margin-bottom: 12px; padding: 10px 12px; border-radius: 6px; background: #5a4a1a; color: #ffe699; font-size: 13px; }
+  .form-merc { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; }
+  .form-adelanto option:disabled { color: #888; }
+  .merc-pendientes { margin-top: 14px; background: var(--bg-2); border: 1px solid #3f3f3f; border-radius: 8px; padding: 10px 14px; }
+  .merc-pendientes summary { cursor: pointer; font-weight: 700; }
+  .merc-pendientes ul { margin: 8px 0 4px; padding-left: 18px; font-size: 13px; }
+  .merc-pendientes li { margin: 3px 0; }
+  .merc-pendientes h4 { margin: 12px 0 2px; font-size: 13px; color: var(--fg-dim); }
+  #btn-siguiente { display: none; background: var(--accent); border-color: var(--accent); color: #fff; }
+  #btn-siguiente:hover:not(:disabled) { background: #3a7bc8; }
+  .volver { display: inline-block; background: var(--btn); color: var(--fg); text-decoration: none; padding: 10px 16px; border-radius: 6px; font-weight: 600; border: 1px solid #4a4a4a; }
+  .volver:hover { background: var(--btn-hover); }
+  @media (max-width: 640px) {
+    input[type=search] { width: 100%; }
+    .barra.busqueda { width: 100%; }
+    .barra.busqueda input { flex: 1; }
+  }
+</style>
+</head>
+<body>
+<div id="cargando" style="display:none"><div><div class="spinner"></div><div id="cargando-texto">Cargando el motor de Python…<br><small>(solo la primera vez tarda unos segundos)</small></div></div></div>
+
+<div style="background:#a01818;color:#fff;text-align:center;font:700 13px 'Segoe UI',sans-serif;padding:6px 10px">🧪 VERSIÓN DE PRUEBA — Mercadería. La página oficial sigue igual hasta aprobarla.</div>
+<nav id="nav">
+  <a class="marca" href="#/">🏠 Procesador</a>
+  <div id="migas"></div>
+</nav>
+
+<!-- ===== Inicio: Bares / BRIE ===== -->
+<section class="pantalla" id="pantalla-inicio">
+  <div class="menu">
+    <h2>¿Para qué negocio es?</h2>
+    <p>Elegí una opción para empezar.</p>
+    <div class="opciones">
+      <a class="opcion" href="#/bares">
+        <span class="icono">🍺</span><b>Bares</b>
+        <span class="desc">Liquidar las horas del personal de los bares.</span>
+      </a>
+      <a class="opcion" href="#/brie">
+        <span class="icono">🛒</span><b>BRIE</b>
+        <span class="desc">Liquidar horas, adelantos y mercadería.</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Menú BRIE ===== -->
+<section class="pantalla" id="pantalla-brie">
+  <div class="menu">
+    <h2>BRIE</h2>
+    <p>¿Qué querés hacer?</p>
+    <div class="opciones">
+      <a class="opcion" href="#/brie/liquidar">
+        <span class="icono">🕒</span><b>Liquidar</b>
+        <span class="desc">Procesar el archivo del reloj y calcular las horas.</span>
+      </a>
+      <a class="opcion" href="#/brie/adelantos">
+        <span class="icono">💵</span><b>Adelantos</b>
+        <span class="desc">Adelantos de sueldo del personal.</span>
+        <span class="pronto">PRÓXIMAMENTE</span>
+      </a>
+      <a class="opcion" href="#/brie/mercaderia">
+        <span class="icono">📦</span><b>Mercadería</b>
+        <span class="desc">Mercadería retirada por el personal.</span>
+        <span class="pronto">PRÓXIMAMENTE</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ===== BRIE › Paso 2: Adelantos =====
+     Recibe la liquidación del paso 1 (variable "flujo" en el script).
+     Para activarla: armar el contenido en "contenido-adelantos" y poner ACTIVA: true en SECCIONES_BRIE. -->
+<section class="pantalla" id="pantalla-adelantos">
+  <div class="flujo">
+    <div class="pasos"></div>
+    <div class="contexto"></div>
+    <div class="sin-datos">
+      <div class="icono">🕒</div>
+      <h2>Primero hay que liquidar las horas</h2>
+      <p>Adelantos es el paso 2: trabaja sobre el archivo ya liquidado.</p>
+      <a class="boton-flujo principal" href="#/brie/liquidar">Ir a Liquidar ➜</a>
+    </div>
+    <div class="cuerpo">
+      <div class="proximamente en-construccion">
+        <div class="icono">💵</div>
+        <h2>Adelantos — próximamente</h2>
+        <p>Esta sección todavía está en construcción.</p>
+      </div>
+      <div class="contenido-seccion" id="contenido-adelantos">
+        <div class="form-adelanto">
+          <div>
+            <label for="adelanto-empleado">Empleado</label>
+            <select id="adelanto-empleado"></select>
+          </div>
+          <div>
+            <label for="adelanto-monto">Monto del adelanto</label>
+            <div class="campo-plata"><span>$</span><input type="text" id="adelanto-monto" inputmode="decimal" placeholder="Ej: 20000" autocomplete="off"></div>
+          </div>
+          <button class="boton-flujo principal" id="btn-restar">➖ Restar adelanto</button>
+          <div id="adelanto-info"></div>
+        </div>
+        <div class="tabla-adelantos"><div class="tabla-scroll"><table>
+          <thead><tr><th>Empleado</th><th class="num">Horas</th><th class="num">Sueldo</th><th class="num">Adelanto</th><th class="num">A cobrar</th><th></th></tr></thead>
+          <tbody id="adelantos-filas"></tbody>
+          <tfoot id="adelantos-totales"></tfoot>
+        </table></div></div>
+      </div>
+      <div class="acciones-flujo">
+        <a class="boton-flujo" href="#/brie/liquidar">⬅ Volver a Liquidar</a>
+        <a class="boton-flujo principal" href="#/brie/mercaderia" title="Pasar a Mercadería (no hace falta que todos tengan adelanto)">Continuar ➜</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== BRIE › Paso 3: Mercadería ===== (igual que Adelantos; recibe liquidación + adelantos) -->
+<section class="pantalla" id="pantalla-mercaderia">
+  <div class="flujo">
+    <div class="pasos"></div>
+    <div class="contexto"></div>
+    <div class="sin-datos">
+      <div class="icono">🕒</div>
+      <h2>Primero hay que liquidar las horas</h2>
+      <p>Mercadería es el paso 3: trabaja sobre el archivo ya liquidado.</p>
+      <a class="boton-flujo principal" href="#/brie/liquidar">Ir a Liquidar ➜</a>
+    </div>
+    <div class="cuerpo">
+      <div class="proximamente en-construccion">
+        <div class="icono">📦</div>
+        <h2>Mercadería — próximamente</h2>
+        <p>Esta sección todavía está en construcción.</p>
+      </div>
+      <div class="contenido-seccion" id="contenido-mercaderia">
+        <input type="file" id="merc-input" accept=".xlsx" hidden>
+        <div class="merc-archivo" id="merc-archivo"></div>
+        <div class="merc-avisos" id="merc-avisos" style="display:none"></div>
+        <div id="merc-trabajo">
+          <div class="form-adelanto form-merc">
+            <div>
+              <label for="merc-empleado">Empleado del local</label>
+              <select id="merc-empleado"></select>
+            </div>
+            <div>
+              <label for="merc-cuenta">Cuenta en el archivo de mercadería</label>
+              <select id="merc-cuenta"></select>
+            </div>
+            <button class="boton-flujo principal" id="btn-restar-merc">➖ Restar mercadería</button>
+            <div id="merc-info"></div>
+          </div>
+          <div class="tabla-adelantos"><div class="tabla-scroll"><table>
+            <thead><tr><th>Empleado</th><th class="num">Sueldo</th><th class="num">Adelanto</th><th class="num">Mercadería</th><th class="num">A cobrar</th><th></th></tr></thead>
+            <tbody id="merc-filas"></tbody>
+            <tfoot id="merc-totales"></tfoot>
+          </table></div></div>
+          <details class="merc-pendientes" id="merc-pendientes"></details>
+        </div>
+      </div>
+      <div class="acciones-flujo">
+        <a class="boton-flujo" href="#/brie/adelantos">⬅ Volver a Adelantos</a>
+        <button class="boton-flujo principal" id="btn-finalizar">📥 Descargar liquidación final</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Liquidar horas (Bares y BRIE) ===== -->
+<section class="pantalla" id="pantalla-liquidar">
+<header>
+  <h1><span id="titulo-herramienta" style="margin:0;color:inherit;font-size:inherit;font-weight:600">Liquidar horas</span> <span>reloj de fichadas</span></h1>
+  <div class="barra">
+    <label class="boton" for="archivo">📂 Select File</label>
+    <input type="file" id="archivo" accept=".xlsx,.csv" hidden>
+    <button id="btn-guardar" disabled>💾 Save</button>
+    <button id="btn-atras" disabled>⬅ Back</button>
+    <button id="btn-limpiar" disabled>↺ Clear</button>
+    <label class="check"><input type="checkbox" id="solo-revisar" disabled> ⚠ Solo para revisar</label>
+    <button id="btn-siguiente" class="principal" disabled title="Primero cargá el archivo del reloj">Siguiente paso: Adelantos ➜</button>
+  </div>
+  <div class="barra busqueda">
+    <input type="search" id="busqueda" placeholder="🔍 Buscar por ID, nombre o apellido" disabled>
+  </div>
+</header>
+
+<div id="pasos-liquidar" class="pasos"></div>
+<div id="panel-sueldo">
+  <label for="sueldo-hora">💲 Sueldo por hora<small>Todos los empleados cobran lo mismo</small></label>
+  <div class="campo-plata" id="campo-sueldo"><span>$</span><input type="text" id="sueldo-hora" inputmode="decimal" placeholder="Ej: 4500" autocomplete="off"></div>
+  <div id="total-sueldos"></div>
+</div>
+<div id="info">
+  <div id="estado"></div>
+  <div class="leyenda" id="leyenda"></div>
+</div>
+<div id="aviso"></div>
+
+<main>
+  <div id="zona">
+    <strong>Arrastrá acá el archivo del reloj</strong>
+    o usá el botón “Select File” (.csv o .xlsx)
+    <small>El archivo se procesa en tu navegador: no se sube a ningún servidor.</small>
+  </div>
+  <div id="vista"></div>
+  <div id="vacio">Sin resultados</div>
+</main>
+<footer>Las horas se calculan con fecha + hora de entrada y salida, así que los turnos que pasan la medianoche se cuentan bien.</footer>
+</section>
+
+<div id="modal" role="dialog" aria-modal="true" aria-labelledby="modal-titulo">
+  <div class="caja">
+    <h2 id="modal-titulo">¿De qué bar es este archivo?</h2>
+    <p id="modal-texto">Escribí el nombre del bar. Con ese nombre se va a descargar el Excel.</p>
+    <div class="archivo-elegido" id="modal-archivo"></div>
+    <input type="text" id="nombre-bar" placeholder="Ej: BRIE Centro" autocomplete="off" maxlength="60">
+    <div class="error" id="modal-error"></div>
+    <div class="acciones">
+      <button id="modal-cancelar">Cancelar</button>
+      <button id="modal-aceptar" class="principal">Procesar ✔</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+let py = null, web = null;
+let datos = null, nombreArchivo = "horas", nombreBar = "", archivoPendiente = null;
+let seccion = null;   // "bares" o "brie": a qué negocio pertenece la pantalla actual
+let pantallaActual = null;
+
+// Lo que va pasando de un paso al otro en BRIE (Liquidar → Adelantos → Mercadería).
+// Cada sección lee lo anterior y guarda su resultado acá.
+const flujo = { local: "", liquidacion: null, sueldoHora: 0, adelantos: {}, mercaderia: {} };
+let errorInicio = null;
+
+// ---------- Arranque de Python en el navegador ----------
+async function iniciar() {
+  try {
+    py = await loadPyodide();
+    $("cargando-texto").innerHTML = "Instalando pandas y openpyxl…";
+    try {
+      await py.loadPackage(["pandas", "openpyxl"]);
+    } catch (e) {
+      await py.loadPackage(["pandas", "micropip"]);
+      await py.pyimport("micropip").install("openpyxl");
+    }
+    const ver = Date.now();   // evita versiones viejas en caché después de actualizar el repo
+    // Archivos de Python que usa la página. Para una sección nueva, agregar su .py acá.
+    for (const f of ["lectorExcel_IA.py", "web.py", "adelantos.py", "mercaderia.py"]) {
+      const r = await fetch(`${f}?v=${ver}`);
+      if (!r.ok) throw new Error(`No se pudo descargar ${f}`);
+      py.FS.writeFile(`/home/pyodide/${f}`, await r.text());
+    }
+    py.runPython("import sys; sys.path.insert(0, '/home/pyodide')");
+    web = py.pyimport("web");
+    $("cargando").style.display = "none";
+  } catch (e) {
+    errorInicio = e.message;
+    $("cargando-texto").innerHTML = `No se pudo iniciar el programa.<br><small>${e.message}</small>`;
+  }
+}
+
+// ---------- Leer y procesar ----------
+async function leerArchivo(file) {
+  if (!web) return;
+  if (!/\.(csv|xlsx)$/i.test(file.name)) { mostrarAviso("Solo se aceptan archivos .csv o .xlsx"); return; }
+  const ruta = "/tmp/" + file.name.replace(/[^\w.\-]/g, "_");
+  try {
+    py.FS.writeFile(ruta, new Uint8Array(await file.arrayBuffer()));
+    datos = JSON.parse(web.cargar(ruta));
+  } catch (e) {
+    mostrarAviso("Error al leer el archivo: " + (e.message || e).toString().split("\n").slice(-2).join(" "));
+    return;
+  }
+  if (!datos.empleados.length) { mostrarAviso("No se encontraron fichadas válidas en el archivo"); datos = null; return; }
+  // El Excel se descarga con el nombre del bar (sin caracteres que Windows no acepta)
+  nombreArchivo = nombreBar.replace(/[\\/:*?"<>|]+/g, "-").replace(/\s+/g, " ").trim() || "horas";
+  $("busqueda").value = ""; $("solo-revisar").checked = false;
+  ["btn-guardar", "btn-atras", "btn-limpiar", "solo-revisar", "busqueda", "btn-siguiente"].forEach(id => $(id).disabled = false);
+  $("btn-siguiente").title = "";
+  if (seccion === "brie") {   // un archivo nuevo reinicia el flujo de BRIE
+    Object.assign(flujo, { local: nombreBar, liquidacion: datos, adelantos: {}, mercaderia: {} });
+    dibujarPasos(1);
+  }
+  $("zona").style.display = "none";
+  dibujarLeyenda();
+  if (datos.invalidas.length) {
+    mostrarAviso(`No se pudieron leer ${datos.invalidas.length} línea(s):\n` +
+      datos.invalidas.slice(0, 15).map(l => `Línea ${l.linea}: ${l.texto}`).join("\n"));
+  } else ocultarAviso();
+  aplicarFiltros();
+}
+
+// ---------- Filtros ----------
+function visibles() {
+  if (!datos) return [];
+  const terminos = $("busqueda").value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  return datos.empleados.filter(e => {
+    if ($("solo-revisar").checked && !e.revisar) return false;
+    const texto = `${e.id} ${e.nombre} ${e.apellido}`.toLowerCase();
+    return terminos.every(t => texto.includes(t));
+  });
+}
+function aplicarFiltros() { dibujar(visibles()); }
+
+// ---------- Vista previa ----------
+const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function chips(e) {
+  const c = [];
+  if (e.sospechosos) c.push(`<span class="chip sos">${e.sospechosos} sospechoso${e.sospechosos > 1 ? "s" : ""}</span>`);
+  if (e.sin_pareja) c.push(`<span class="chip sin">${e.sin_pareja} sin pareja</span>`);
+  if (e.cortos) c.push(`<span class="chip cor">${e.cortos} muy corto${e.cortos > 1 ? "s" : ""}</span>`);
+  if (e.extendidos) c.push(`<span class="chip ext">${e.extendidos} extendido${e.extendidos > 1 ? "s" : ""}</span>`);
+  if (e.repetidas) c.push(`<span class="chip rep">${e.repetidas} repetida${e.repetidas > 1 ? "s" : ""}</span>`);
+  if (!c.length) c.push(`<span class="chip okc">OK</span>`);
+  return c.join("");
+}
+
+function dibujar(lista) {
+  const vista = $("vista");
+  vista.style.display = lista.length ? "block" : "none";
+  $("vacio").style.display = datos && !lista.length ? "block" : "none";
+  vista.innerHTML = lista.map(e => `
+    <section class="empleado${e.revisar ? " revisar" : ""}">
+      <div class="titulo">
+        <div><b><span class="id">${esc(e.id)}</span>${esc(e.nombre)} ${esc(e.apellido)}</b></div>
+        <div class="chips">${chips(e)}</div>
+        <div class="total">Total: ${esc(e.total)} h · ${e.turnos} turnos${conSueldo() ? ` · <span class="sueldo">${pesos(sueldoDe(e))}</span>` : ""}</div>
+      </div>
+      <div class="tabla-scroll"><table>
+        <thead><tr><th>Fecha</th><th>Hora</th><th class="num">Horas turno</th><th>Observación</th></tr></thead>
+        <tbody>${e.filas.map(f => `
+          <tr class="${f.nivel}"><td>${f.fecha}</td><td>${f.hora}</td><td class="num">${f.horas}</td><td class="obs">${esc(f.obs)}</td></tr>`).join("")}
+        </tbody>
+        <tfoot><tr><td colspan="2">Total semanal</td><td class="num">${esc(e.total)}</td><td></td></tr></tfoot>
+      </table></div>
+    </section>`).join("");
+  const s = (k) => lista.reduce((a, e) => a + e[k], 0);
+  $("estado").innerHTML = datos ? `<span id="bar-actual">${esc(nombreBar)}</span> · ${lista.length} empleados · ${s("turnos")} turnos · ${s("extendidos")} extendidos · ` +
+    `${s("sospechosos")} sospechosos · ${s("cortos")} muy cortos · ${s("sin_pareja")} sin pareja · ${s("repetidas")} repetidas ignoradas` : "";
+}
+
+function dibujarLeyenda() {
+  const c = datos.config;
+  $("leyenda").innerHTML = `<span class="ext">Extendido &gt;${c.extendido}h</span><span class="sos">Sospechoso &gt;${c.sospechoso}h</span>` +
+    `<span class="cor">Muy corto &lt;${c.corto}min</span><span class="sin">Sin pareja</span><span class="rep">Repetida</span>`;
+}
+
+function mostrarAviso(t) { $("aviso").textContent = t; $("aviso").style.display = "block"; }
+function ocultarAviso() { $("aviso").style.display = "none"; }
+
+// ---------- Botones ----------
+function guardar() {
+  const lista = visibles();
+  if (!lista.length) { mostrarAviso("No hay datos para guardar"); return; }
+  try {
+    const ruta = "/tmp/salida.xlsx";
+    web.exportar(JSON.stringify(lista.map(e => e.id)), ruta, conSueldo() ? flujo.sueldoHora : 0);
+    const blob = new Blob([py.FS.readFile(ruta)], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `${nombreArchivo}.xlsx`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  } catch (e) { mostrarAviso("No se pudo generar el Excel: " + e.message); }
+}
+function atras() { $("busqueda").value = ""; $("solo-revisar").checked = false; aplicarFiltros(); }
+function limpiar() {
+  datos = null; $("vista").innerHTML = ""; $("vista").style.display = "none"; $("vacio").style.display = "none";
+  $("zona").style.display = "block"; $("estado").textContent = ""; $("leyenda").innerHTML = ""; ocultarAviso();
+  $("busqueda").value = ""; $("solo-revisar").checked = false; $("archivo").value = "";
+  ["btn-guardar", "btn-atras", "btn-limpiar", "solo-revisar", "busqueda", "btn-siguiente"].forEach(id => $(id).disabled = true);
+  $("btn-siguiente").title = "Primero cargá el archivo del reloj";
+  Object.assign(flujo, { local: "", liquidacion: null, adelantos: {}, mercaderia: {} });
+  if (pantallaActual === "liquidar") dibujarPasos(seccion === "brie" ? 1 : null);
+}
+
+// ---------- Ventana: nombre del bar ----------
+function pedirNombreBar(file) {
+  if (!web) return;
+  if (!/\.(csv|xlsx)$/i.test(file.name)) { mostrarAviso("Solo se aceptan archivos .csv o .xlsx"); return; }
+  archivoPendiente = file;
+  const brie = seccion === "brie";
+  $("modal-titulo").textContent = brie ? "¿De qué local BRIE es este archivo?" : "¿De qué bar es este archivo?";
+  $("modal-texto").textContent = (brie ? "Escribí el nombre del local." : "Escribí el nombre del bar.") +
+    " Con ese nombre se va a descargar el Excel.";
+  $("nombre-bar").placeholder = brie ? "Ej: BRIE Centro" : "Ej: Chale";
+  $("modal-archivo").textContent = "Archivo: " + file.name;
+  $("modal-error").textContent = "";
+  $("nombre-bar").value = "";
+  $("modal").classList.add("abierto");
+  setTimeout(() => $("nombre-bar").focus(), 50);
+}
+function aceptarNombreBar() {
+  const nombre = $("nombre-bar").value.trim();
+  if (!nombre) { $("modal-error").textContent = "Escribí el nombre del bar para continuar"; $("nombre-bar").focus(); return; }
+  nombreBar = nombre;
+  $("modal").classList.remove("abierto");
+  const f = archivoPendiente; archivoPendiente = null;
+  leerArchivo(f);
+}
+function cancelarNombreBar() {
+  archivoPendiente = null; $("archivo").value = "";
+  $("modal").classList.remove("abierto");
+}
+$("modal-aceptar").addEventListener("click", aceptarNombreBar);
+$("modal-cancelar").addEventListener("click", cancelarNombreBar);
+$("nombre-bar").addEventListener("input", () => $("modal-error").textContent = "");
+$("nombre-bar").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") aceptarNombreBar();
+  if (e.key === "Escape") cancelarNombreBar();
+});
+
+$("archivo").addEventListener("change", (e) => { if (e.target.files[0]) pedirNombreBar(e.target.files[0]); e.target.value = ""; });
+$("btn-guardar").addEventListener("click", guardar);
+$("btn-atras").addEventListener("click", atras);
+$("btn-limpiar").addEventListener("click", limpiar);
+$("solo-revisar").addEventListener("change", aplicarFiltros);
+$("busqueda").addEventListener("input", aplicarFiltros);
+
+// Arrastrar y soltar en cualquier parte de la página
+["dragenter", "dragover"].forEach(ev => document.addEventListener(ev, (e) => { e.preventDefault(); $("zona").classList.add("encima"); }));
+["dragleave", "drop"].forEach(ev => document.addEventListener(ev, (e) => { e.preventDefault(); $("zona").classList.remove("encima"); }));
+document.addEventListener("drop", (e) => {
+  const f = e.dataTransfer.files[0];
+  if (f && pantallaActual === "liquidar") pedirNombreBar(f);
+  else if (f && pantallaActual === "mercaderia" && flujo.liquidacion) cargarArchivoMerc(f);
+});
+
+
+// =====================================================================
+//  MERCADERÍA (paso 3)
+//  El archivo de mercadería es uno solo para todas las sucursales: se guarda en este
+//  navegador y se reutiliza local por local. Cada cuenta del archivo se aplica UNA sola vez.
+// =====================================================================
+const CLAVE_MERC = "brie.mercaderia.v1";
+let mercMemoria = null;          // copia en memoria por si el navegador no deja guardar
+let mercGuardadoOk = true;
+
+function leerMerc() {
+  try { const t = localStorage.getItem(CLAVE_MERC); if (t) return JSON.parse(t); } catch (e) {}
+  return mercMemoria;
+}
+function guardarMerc(m) {
+  mercMemoria = m;
+  try { localStorage.setItem(CLAVE_MERC, JSON.stringify(m)); mercGuardadoOk = true; }
+  catch (e) { mercGuardadoOk = false; }
+}
+
+// --- Coincidencia de nombres entre el reloj ("Matias Lopez") y el archivo ("LOPEZ MATIAS EZEQUIEL")
+const normalizar = (t) => String(t).normalize("NFD").replace(/[̀-ͯ]/g, "")
+  .toUpperCase().replace(/[^A-Z\s]/g, " ").split(/\s+/).filter(x => x.length > 1);
+function puntaje(nombreReloj, nombreArchivo) {
+  const a = normalizar(nombreReloj), b = normalizar(nombreArchivo);
+  let p = 0;
+  for (const x of a) {
+    if (b.includes(x)) p += 1;
+    else if (x.length >= 4 && b.some(y => y.length >= 4 && (y.startsWith(x) || x.startsWith(y)))) p += 0.7;
+  }
+  return p;
+}
+function sugerirCuenta(emp, cuentas) {
+  const libres = cuentas.filter(c => !cuentaUsada(c.codigo));
+  const conPuntos = libres.map(c => [c, puntaje(nombreDe(emp), c.nombre)]).sort((x, y) => y[1] - x[1]);
+  if (!conPuntos.length || conPuntos[0][1] < 1.7) return null;              // nombre y apellido
+  if (conPuntos[1] && conPuntos[1][1] === conPuntos[0][1]) return null;     // empate: que elija la persona
+  return conPuntos[0][0];
+}
+
+const cuentaUsada = (codigo) => { const m = leerMerc(); return m && m.aplicados[codigo]; };
+const aCobrar = (e) => sueldoDe(e) - (flujo.adelantos[e.id] || 0) - ((flujo.mercaderia[e.id] || {}).monto || 0);
+
+// Si el local ya se había trabajado (por ejemplo, se recargó la página), recupera lo aplicado
+function recuperarAplicados() {
+  const m = leerMerc();
+  if (!m) return;
+  const local = flujo.local.trim().toUpperCase();
+  for (const [codigo, ap] of Object.entries(m.aplicados)) {
+    if (ap.local.trim().toUpperCase() !== local) continue;
+    const emp = flujo.liquidacion.empleados.find(e => e.id === ap.relojId);
+    const cuenta = m.datos.empleados.find(c => c.codigo === codigo);
+    if (emp && cuenta && !flujo.mercaderia[emp.id]) flujo.mercaderia[emp.id] = { codigo, nombre: cuenta.nombre, monto: ap.monto };
+  }
+}
+
+async function cargarArchivoMerc(file) {
+  if (!web) return;
+  if (!/\.xlsx$/i.test(file.name)) { infoMerc("El archivo de mercadería tiene que ser .xlsx", "error"); return; }
+  const ruta = "/tmp/merc_" + file.name.replace(/[^\w.\-]/g, "_");
+  let datosMerc;
+  try {
+    py.FS.writeFile(ruta, new Uint8Array(await file.arrayBuffer()));
+    datosMerc = JSON.parse(py.pyimport("mercaderia").procesar(ruta));
+  } catch (e) {
+    infoMerc("No se pudo leer el archivo de mercadería: " + String(e.message || e).split("\n").filter(Boolean).slice(-1)[0], "error");
+    return;
+  }
+  const anterior = leerMerc();
+  // Mismo período = archivo corregido: se conservan las cuentas ya aplicadas. Otro período = mes nuevo.
+  const aplicados = anterior && anterior.datos.periodo === datosMerc.periodo ? anterior.aplicados : {};
+  for (const c of Object.keys(aplicados)) if (!datosMerc.empleados.some(x => x.codigo === c)) delete aplicados[c];
+  guardarMerc({ archivo: file.name, cargado: new Date().toISOString(), datos: datosMerc, aplicados });
+  if (!anterior || anterior.datos.periodo !== datosMerc.periodo) {
+    for (const id of Object.keys(flujo.mercaderia)) delete flujo.mercaderia[id];
+  }
+  mostrarPasoFlujo("mercaderia");
+  infoMerc(`✓ Archivo cargado: ${datosMerc.empleados.length} cuentas. Queda guardado en este navegador para las demás sucursales.`, "ok");
+}
+
+function dibujarArchivoMerc(m) {
+  const caja = $("merc-archivo");
+  if (!m) {
+    caja.className = "merc-archivo vacio";
+    caja.innerHTML = `<div style="font-size:30px">📦</div>
+      <b>Cargá el archivo de Mercadería a Personal (con descuento)</b>
+      <span style="color:var(--fg-dim);font-size:13px">Se carga una sola vez y queda guardado para usarlo en todas las sucursales.</span>
+      <label class="boton-flujo principal" for="merc-input" style="margin-top:6px">📂 Elegir archivo .xlsx</label>`;
+    return;
+  }
+  const d = m.datos, usadas = Object.keys(m.aplicados).length;
+  caja.className = "merc-archivo";
+  caja.innerHTML = `<div class="detalle">📦 <b>Mercadería ${esc(d.periodo)}</b> · ${d.empleados.length} cuentas · total a descontar <b>${pesos(d.total)}</b>
+      <small>${esc(m.archivo)} · cargado el ${new Date(m.cargado).toLocaleDateString("es-AR")} · aplicadas ${usadas} de ${d.empleados.length} (sumando todas las sucursales)
+      ${mercGuardadoOk ? "" : " · ⚠ este navegador no deja guardar: se pierde al cerrar la página"}</small></div>
+    <label class="boton-flujo" for="merc-input">🔄 Cambiar archivo</label>`;
+}
+
+function infoMerc(texto, clase = "") { $("merc-info").className = clase; $("merc-info").innerHTML = texto; }
+
+function dibujarMercaderia() {
+  const m = leerMerc();
+  recuperarAplicados();
+  dibujarArchivoMerc(m);
+  $("merc-trabajo").style.display = m ? "block" : "none";
+  $("merc-avisos").style.display = m && m.datos.avisos.length ? "block" : "none";
+  if (m) $("merc-avisos").innerHTML = "⚠ Revisá el archivo:<br>" + m.datos.avisos.map(esc).join("<br>");
+  if (!m) return;
+
+  const emps = flujo.liquidacion.empleados;
+  const selE = $("merc-empleado"), elegido = selE.value;
+  selE.innerHTML = `<option value="">— Elegí un empleado —</option>` + emps.map(e => {
+    const ap = flujo.mercaderia[e.id], neg = ap && aCobrar(e) < 0;
+    return `<option value="${esc(e.id)}"${ap ? ` class="${neg ? "negativo" : "con-adelanto"}"` : ""}>${ap ? (neg ? "⚠ " : "✓ ") : ""}` +
+      `${esc(nombreDe(e))} (${esc(e.id)})${ap ? " — mercadería " + pesos(ap.monto) : ""}</option>`;
+  }).join("");
+  selE.value = emps.some(e => e.id === elegido) ? elegido : "";
+
+  let tS = 0, tA = 0, tM = 0;
+  $("merc-filas").innerHTML = emps.map(e => {
+    const s = sueldoDe(e), a = flujo.adelantos[e.id] || 0, ap = flujo.mercaderia[e.id], mm = ap ? ap.monto : 0, resto = s - a - mm;
+    tS += s; tA += a; tM += mm;
+    const clase = resto < 0 ? "negativo" : ap ? "con-adelanto" : "";
+    return `<tr class="${clase}"><td>${ap ? (resto < 0 ? "⚠ " : "✓ ") : ""}${esc(nombreDe(e))} <span style="color:var(--fg-dim)">(${esc(e.id)})</span>` +
+      `${ap ? `<br><small style="opacity:.8">↳ ${esc(ap.nombre)} (${esc(ap.codigo)})</small>` : ""}</td>
+      <td class="num">${pesos(s)}</td><td class="num">${a ? pesos(a) : "—"}</td><td class="num">${ap ? pesos(mm) : "—"}</td>
+      <td class="num"><b>${pesos(resto)}</b></td>
+      <td>${ap ? `<button class="quitar" data-id="${esc(e.id)}" title="Por si te equivocaste">Deshacer</button>` : ""}</td></tr>`;
+  }).join("");
+  $("merc-totales").innerHTML = `<tr><td>Total</td><td class="num">${pesos(tS)}</td><td class="num">${pesos(tA)}</td>` +
+    `<td class="num">${pesos(tM)}</td><td class="num">${pesos(tS - tA - tM)}</td><td></td></tr>`;
+
+  // Cuentas del archivo: sin asignar / ya asignadas (en cualquier sucursal)
+  const libres = m.datos.empleados.filter(c => !m.aplicados[c.codigo]);
+  const usadas = m.datos.empleados.filter(c => m.aplicados[c.codigo]);
+  $("merc-pendientes").innerHTML = `<summary>Cuentas del archivo: ${libres.length} sin asignar · ${usadas.length} ya asignadas</summary>
+    <h4>Sin asignar</h4><ul>${libres.map(c => `<li>${esc(c.nombre)} (${esc(c.codigo)}) — ${pesos(c.total)}</li>`).join("") || "<li>Ninguna 🎉</li>"}</ul>
+    <h4>Ya asignadas</h4><ul>${usadas.map(c => { const ap = m.aplicados[c.codigo];
+      return `<li>${esc(c.nombre)} — ${pesos(c.total)} → <b>${esc(ap.empleado)}</b> (${esc(ap.local)})
+        <button class="quitar" data-liberar="${esc(c.codigo)}" title="La vuelve a dejar disponible">Liberar</button></li>`; }).join("") || "<li>Ninguna</li>"}</ul>`;
+
+  dibujarCuentas();
+}
+
+function dibujarCuentas() {
+  const m = leerMerc();
+  const emp = flujo.liquidacion.empleados.find(x => x.id === $("merc-empleado").value);
+  const selC = $("merc-cuenta");
+  const cuentas = [...m.datos.empleados].sort((x, y) => x.nombre.localeCompare(y.nombre));
+  const sugerida = emp && !flujo.mercaderia[emp.id] ? sugerirCuenta(emp, cuentas) : null;
+  // Al cambiar de empleado no se arrastra la cuenta elegida para el anterior
+  const elegida = selC.dataset.emp === (emp ? emp.id : "") ? selC.value : "";
+  selC.dataset.emp = emp ? emp.id : "";
+  selC.innerHTML = `<option value="">— Elegí la cuenta —</option>` + cuentas.map(c => {
+    const ap = m.aplicados[c.codigo];
+    return `<option value="${esc(c.codigo)}"${ap ? " disabled" : ""}>${sugerida && sugerida.codigo === c.codigo ? "★ " : ""}` +
+      `${esc(c.nombre)} (${esc(c.codigo)}) — ${pesos(c.total)}${ap ? ` — ya aplicada a ${esc(ap.empleado)} (${esc(ap.local)})` : ""}</option>`;
+  }).join("");
+  selC.value = sugerida ? sugerida.codigo : (cuentas.some(c => c.codigo === elegida && !m.aplicados[c.codigo]) ? elegida : "");
+  mostrarInfoMerc(sugerida);
+}
+
+function mostrarInfoMerc(sugerida) {
+  const m = leerMerc();
+  const emp = flujo.liquidacion.empleados.find(x => x.id === $("merc-empleado").value);
+  const cuenta = m.datos.empleados.find(c => c.codigo === $("merc-cuenta").value);
+  const ya = emp && flujo.mercaderia[emp.id];
+  $("merc-cuenta").disabled = !emp || !!ya;
+  $("btn-restar-merc").disabled = !emp || !!ya || !cuenta;
+  if (!emp) return infoMerc("Elegí el empleado y después su cuenta en el archivo de mercadería. No hace falta que todos tengan.");
+  if (ya) return infoMerc(`${aCobrar(emp) < 0 ? "⚠" : "✓"} A <b>${esc(nombreDe(emp))}</b> ya se le restó la mercadería de ` +
+    `<b>${esc(ya.nombre)}</b> (${pesos(ya.monto)}). Si te equivocaste, tocá “Deshacer” en la tabla.`, aCobrar(emp) < 0 ? "alerta" : "ok");
+  const base = `<b>${esc(nombreDe(emp))}</b>: sueldo ${pesos(sueldoDe(emp))}` +
+    (flujo.adelantos[emp.id] ? ` · adelanto ${pesos(flujo.adelantos[emp.id])}` : "");
+  if (!cuenta) return infoMerc(base + ". No se encontró una cuenta con el mismo nombre: elegila de la lista si tiene mercadería.");
+  infoMerc(base + ` · mercadería <b>${pesos(cuenta.total)}</b> → le quedaría <b>${pesos(aCobrar(emp) - cuenta.total)}</b>` +
+    (sugerida && sugerida.codigo === cuenta.codigo ? `<br>★ Cuenta sugerida por el nombre: revisá que sea la persona correcta.` : ""));
+}
+
+function restarMercaderia() {
+  const m = leerMerc();
+  const emp = flujo.liquidacion.empleados.find(x => x.id === $("merc-empleado").value);
+  const cuenta = m.datos.empleados.find(c => c.codigo === $("merc-cuenta").value);
+  if (!emp || !cuenta || flujo.mercaderia[emp.id] || m.aplicados[cuenta.codigo]) return;
+  flujo.mercaderia[emp.id] = { codigo: cuenta.codigo, nombre: cuenta.nombre, monto: cuenta.total };
+  m.aplicados[cuenta.codigo] = { local: flujo.local, relojId: emp.id, empleado: nombreDe(emp), monto: cuenta.total };
+  guardarMerc(m);
+  mostrarPasoFlujo("mercaderia");
+  const resto = aCobrar(emp);
+  if (resto < 0) infoMerc(`⚠ Atención: entre adelanto y mercadería, <b>${esc(nombreDe(emp))}</b> supera su sueldo. ` +
+    `Queda debiendo <b>${pesos(-resto)}</b>.`, "alerta");
+  else infoMerc(`✓ Listo: a <b>${esc(nombreDe(emp))}</b> se le restaron <b>${pesos(cuenta.total)}</b> de mercadería. ` +
+    `Le queda a cobrar <b>${pesos(resto)}</b>.`, "ok");
+}
+
+function deshacerMercaderia(relojId) {
+  const ap = flujo.mercaderia[relojId];
+  if (!ap) return;
+  const m = leerMerc();
+  if (m && m.aplicados[ap.codigo]) { delete m.aplicados[ap.codigo]; guardarMerc(m); }
+  delete flujo.mercaderia[relojId];
+  mostrarPasoFlujo("mercaderia");
+}
+
+function liberarCuenta(codigo) {
+  const m = leerMerc();
+  if (!m || !m.aplicados[codigo]) return;
+  for (const [id, ap] of Object.entries(flujo.mercaderia)) if (ap.codigo === codigo) delete flujo.mercaderia[id];
+  delete m.aplicados[codigo];
+  guardarMerc(m);
+  mostrarPasoFlujo("mercaderia");
+}
+
+function descargarFinal() {
+  if (!flujo.liquidacion || !web) return;
+  try {
+    const ruta = "/tmp/liquidacion_final.xlsx";
+    const merc = Object.fromEntries(Object.entries(flujo.mercaderia).map(([id, ap]) =>
+      [id, { monto: ap.monto, cuenta: `${ap.codigo} · ${ap.nombre}` }]));
+    web.exportar(JSON.stringify(flujo.liquidacion.empleados.map(e => e.id)), ruta, flujo.sueldoHora,
+      JSON.stringify(flujo.adelantos), JSON.stringify(merc));
+    const blob = new Blob([py.FS.readFile(ruta)], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `${(flujo.local || "BRIE").replace(/[\\/:*?"<>|]+/g, "-").trim()} - liquidación final.xlsx`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  } catch (e) { infoMerc("No se pudo generar el Excel: " + e.message, "error"); }
+}
+
+$("merc-input").addEventListener("change", (e) => { if (e.target.files[0]) cargarArchivoMerc(e.target.files[0]); e.target.value = ""; });
+$("merc-empleado").addEventListener("change", dibujarCuentas);
+$("merc-cuenta").addEventListener("change", () => mostrarInfoMerc(null));
+$("btn-restar-merc").addEventListener("click", restarMercaderia);
+$("btn-finalizar").addEventListener("click", descargarFinal);
+$("merc-filas").addEventListener("click", (ev) => { const b = ev.target.closest(".quitar"); if (b) deshacerMercaderia(b.dataset.id); });
+$("merc-pendientes").addEventListener("click", (ev) => { const b = ev.target.closest("[data-liberar]"); if (b) { ev.preventDefault(); liberarCuenta(b.dataset.liberar); } });
+
+// ---------- Secciones de BRIE ----------
+// Poné ACTIVA: true cuando una sección tenga su contenido listo:
+// se quita el cartel "PRÓXIMAMENTE" del menú y se muestra su contenido.
+const SECCIONES_BRIE = {
+  adelantos:  { ACTIVA: true },
+  mercaderia: { ACTIVA: true },
+};
+function prepararSecciones() {
+  for (const [id, cfg] of Object.entries(SECCIONES_BRIE)) {
+    const pantalla = $("pantalla-" + id);
+    pantalla.querySelector(".en-construccion").style.display = cfg.ACTIVA ? "none" : "block";
+    $("contenido-" + id).style.display = cfg.ACTIVA ? "block" : "none";
+    const tarjeta = document.querySelector(`.opcion[href="#/brie/${id}"] .pronto`);
+    if (tarjeta) tarjeta.style.display = cfg.ACTIVA ? "none" : "inline-block";
+  }
+}
+prepararSecciones();
+
+// ---------- Flujo BRIE ----------
+const PASOS = [["Liquidar", "#/brie/liquidar"], ["Adelantos", "#/brie/adelantos"], ["Mercadería", "#/brie/mercaderia"]];
+
+function dibujarPasos(actual) {
+  const html = !actual ? "" : PASOS.map(([nombre, href], i) => {
+    const n = i + 1;
+    const hecho = n < actual && (n === 1 ? !!flujo.liquidacion : true);
+    const clase = n === actual ? "actual" : hecho ? "hecho" : "";
+    return (i ? `<span class="flecha">›</span>` : "") +
+      `<a class="paso ${clase}" href="${href}"><span class="n">${hecho ? "✓" : n}</span>${nombre}</a>`;
+  }).join("");
+  document.querySelectorAll(".pasos").forEach(el => el.innerHTML = html);
+}
+
+const aMinutos = (t) => { const [h, m] = (t || "0:0").split(":").map(Number); return h * 60 + m; };
+const aHoras = (min) => `${Math.floor(min / 60)}:${String(min % 60).padStart(2, "0")}`;
+
+function mostrarPasoFlujo(id) {
+  const pantalla = $("pantalla-" + id);
+  const liq = flujo.liquidacion;
+  const listo = liq && flujo.sueldoHora > 0;   // hace falta la liquidación y el sueldo por hora
+  const aviso = pantalla.querySelector(".sin-datos");
+  aviso.querySelector("h2").textContent = !liq ? "Primero hay que liquidar las horas" : "Falta el sueldo por hora";
+  aviso.querySelector("p").textContent = !liq ? "Este paso trabaja sobre el archivo ya liquidado."
+    : "Completá el sueldo por hora en Liquidar para calcular los sueldos.";
+  aviso.style.display = listo ? "none" : "block";
+  pantalla.querySelector(".cuerpo").style.display = listo ? "block" : "none";
+  if (!listo) { pantalla.querySelector(".contexto").innerHTML = ""; return; }
+  const totalMin = liq.empleados.reduce((a, e) => a + aMinutos(e.total), 0);
+  const totalSueldos = liq.empleados.reduce((a, e) => a + sueldoDe(e), 0);
+  const totalAdel = Object.values(flujo.adelantos).reduce((a, m) => a + m, 0);
+  const totalMerc = Object.values(flujo.mercaderia).reduce((a, m) => a + m.monto, 0);
+  pantalla.querySelector(".contexto").innerHTML =
+    `Local: <b>${esc(flujo.local)}</b> · ${liq.empleados.length} empleados · ${aHoras(totalMin)} h · ` +
+    `sueldo por hora <b>${pesos(flujo.sueldoHora)}</b> · sueldos <b>${pesos(totalSueldos)}</b>` +
+    (id === "mercaderia" ? ` · adelantos <b>${pesos(totalAdel)}</b> · mercadería <b>${pesos(totalMerc)}</b>` +
+      ` · a cobrar <b>${pesos(totalSueldos - totalAdel - totalMerc)}</b>` : "");
+  if (id === "adelantos") dibujarAdelantos();
+  if (id === "mercaderia") dibujarMercaderia();
+}
+
+// ---------- Sueldo por hora ----------
+// Acepta "4500", "4.500", "4500,50" o "4.500,50"
+function leerPlata(txt) {
+  let t = String(txt).trim().replace(/[$\s]/g, "");
+  if (!t) return 0;
+  if (t.includes(",")) t = t.replace(/\./g, "").replace(",", ".");
+  else if (/^\d{1,3}(\.\d{3})+$/.test(t)) t = t.replace(/\./g, "");
+  const n = Number(t);
+  return Number.isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : NaN;
+}
+const fmtPesos = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", minimumFractionDigits: 2 });
+const pesos = (n) => fmtPesos.format(n || 0);
+const conSueldo = () => seccion === "brie" && flujo.sueldoHora > 0;
+const sueldoDe = (e) => Math.round(aMinutos(e.total) / 60 * flujo.sueldoHora * 100) / 100;
+
+function actualizarSueldos() {
+  const v = leerPlata($("sueldo-hora").value);
+  flujo.sueldoHora = Number.isNaN(v) ? 0 : v;
+  $("campo-sueldo").classList.toggle("falta", Number.isNaN(v));
+  const lista = datos ? datos.empleados : [];
+  $("total-sueldos").innerHTML = Number.isNaN(v) ? "Monto inválido" :
+    !flujo.sueldoHora ? "Completalo para calcular el sueldo de cada empleado" :
+    lista.length ? `Total a liquidar: <b>${pesos(lista.reduce((a, e) => a + sueldoDe(e), 0))}</b>` : "";
+  try { localStorage.setItem("sueldoHora", $("sueldo-hora").value); } catch (e) {}
+  if (flujo.sueldoHora > 0 && $("aviso").textContent.startsWith("Completá el sueldo")) ocultarAviso();
+  if (datos) aplicarFiltros();
+}
+$("sueldo-hora").addEventListener("input", actualizarSueldos);
+try { $("sueldo-hora").value = localStorage.getItem("sueldoHora") || ""; } catch (e) {}
+
+// Liquidar → Adelantos (la liquidación ya quedó guardada en el flujo al procesar el archivo)
+function irASiguientePaso() {
+  if (!flujo.liquidacion) return;
+  if (!(flujo.sueldoHora > 0)) {
+    mostrarAviso("Completá el sueldo por hora para poder pasar a Adelantos.");
+    $("campo-sueldo").classList.add("falta");
+    $("sueldo-hora").focus();
+    window.scrollTo(0, 0);
+    return;
+  }
+  ocultarAviso();
+  location.hash = "#/brie/adelantos";
+}
+
+// ---------- Adelantos ----------
+function nombreDe(e) { return `${e.nombre} ${e.apellido}`.trim(); }
+
+function dibujarAdelantos() {
+  const emps = flujo.liquidacion.empleados;
+  const sel = $("adelanto-empleado");
+  const elegido = sel.value;
+  sel.innerHTML = `<option value="">— Elegí un empleado —</option>` + emps.map(e => {
+    const tiene = e.id in flujo.adelantos;
+    const negativo = tiene && flujo.adelantos[e.id] > sueldoDe(e);
+    return `<option value="${esc(e.id)}"${tiene ? ` class="${negativo ? "negativo" : "con-adelanto"}"` : ""}>${tiene ? (negativo ? "⚠ " : "✓ ") : ""}${esc(nombreDe(e))} (${esc(e.id)})${tiene ? " — adelanto " + pesos(flujo.adelantos[e.id]) : ""}</option>`;
+  }).join("");
+  sel.value = emps.some(e => e.id === elegido) ? elegido : "";
+
+  let tS = 0, tA = 0;
+  $("adelantos-filas").innerHTML = emps.map(e => {
+    const s = sueldoDe(e), a = flujo.adelantos[e.id] || 0, tiene = e.id in flujo.adelantos;
+    const negativo = tiene && a > s;
+    tS += s; tA += a;
+    return `<tr class="${negativo ? "negativo" : tiene ? "con-adelanto" : ""}"><td>${tiene ? (negativo ? "⚠ " : "✓ ") : ""}${esc(nombreDe(e))} <span style="color:var(--fg-dim)">(${esc(e.id)})</span></td>
+      <td class="num">${esc(e.total)}</td><td class="num">${pesos(s)}</td><td class="num">${tiene ? pesos(a) : "—"}</td>
+      <td class="num"><b>${pesos(s - a)}</b></td>
+      <td>${tiene ? `<button class="quitar" data-id="${esc(e.id)}" title="Por si te equivocaste">Deshacer</button>` : ""}</td></tr>`;
+  }).join("");
+  $("adelantos-totales").innerHTML = `<tr><td>Total</td><td></td><td class="num">${pesos(tS)}</td><td class="num">${pesos(tA)}</td><td class="num">${pesos(tS - tA)}</td><td></td></tr>`;
+  mostrarInfoEmpleado();
+}
+
+function infoAdelanto(texto, clase = "") { $("adelanto-info").className = clase; $("adelanto-info").innerHTML = texto; }
+
+function mostrarInfoEmpleado() {
+  const e = flujo.liquidacion.empleados.find(x => x.id === $("adelanto-empleado").value);
+  const yaTiene = e && e.id in flujo.adelantos;
+  $("btn-restar").disabled = !e || yaTiene;
+  $("adelanto-monto").disabled = !e || yaTiene;
+  if (!e) return infoAdelanto("Elegí el empleado que pidió adelanto y escribí el monto.");
+  if (yaTiene) {
+    const neg = flujo.adelantos[e.id] > sueldoDe(e);
+    return infoAdelanto(`${neg ? "⚠" : "✓"} A <b>${esc(nombreDe(e))}</b> ya se le restó un adelanto de <b>${pesos(flujo.adelantos[e.id])}</b>` +
+      (neg ? ` (supera su sueldo por ${pesos(flujo.adelantos[e.id] - sueldoDe(e))})` : "") +
+      `. Si te equivocaste, tocá “Deshacer” en la tabla.`, neg ? "alerta" : "ok");
+  }
+  infoAdelanto(`<b>${esc(nombreDe(e))}</b>: ${esc(e.total)} h · sueldo <b>${pesos(sueldoDe(e))}</b>`);
+}
+
+function restarAdelanto() {
+  const e = flujo.liquidacion.empleados.find(x => x.id === $("adelanto-empleado").value);
+  if (!e || e.id in flujo.adelantos) return;
+  const monto = leerPlata($("adelanto-monto").value);
+  if (!monto || Number.isNaN(monto)) { infoAdelanto("Escribí un monto válido, por ejemplo 20000 o 20.000,50", "error"); $("adelanto-monto").focus(); return; }
+  // Regla: el adelanto PUEDE superar el sueldo, pero se avisa y queda en amarillo (a cobrar negativo).
+  flujo.adelantos[e.id] = monto;
+  $("adelanto-monto").value = "";
+  mostrarPasoFlujo("adelantos");   // redibuja lista (verde o amarillo), tabla y totales
+  const resto = sueldoDe(e) - monto;
+  if (resto < 0) {
+    infoAdelanto(`⚠ Atención: el adelanto de <b>${esc(nombreDe(e))}</b> (${pesos(monto)}) supera su sueldo (${pesos(sueldoDe(e))}). ` +
+      `Queda debiendo <b>${pesos(-resto)}</b>.`, "alerta");
+  } else {
+    infoAdelanto(`✓ Listo: a <b>${esc(nombreDe(e))}</b> se le restaron <b>${pesos(monto)}</b>. Le queda a cobrar <b>${pesos(resto)}</b>.`, "ok");
+  }
+}
+
+$("adelanto-empleado").addEventListener("change", () => { $("adelanto-monto").value = ""; mostrarInfoEmpleado(); if (!$("adelanto-monto").disabled) $("adelanto-monto").focus(); });
+$("btn-restar").addEventListener("click", restarAdelanto);
+$("adelanto-monto").addEventListener("keydown", (ev) => { if (ev.key === "Enter") restarAdelanto(); });
+$("adelantos-filas").addEventListener("click", (ev) => {
+  const b = ev.target.closest(".quitar");
+  if (!b) return;
+  delete flujo.adelantos[b.dataset.id];
+  mostrarPasoFlujo("adelantos");
+});
+
+$("btn-siguiente").addEventListener("click", irASiguientePaso);
+
+// ---------- Navegación entre menús (#/bares, #/brie/liquidar, ...) ----------
+const RUTAS = {
+  "/":               { pantalla: "inicio", migas: [] },
+  "/bares":          { pantalla: "liquidar", seccion: "bares", titulo: "Liquidar horas · Bares",
+                       migas: [["Bares", null]] },
+  "/brie":           { pantalla: "brie", seccion: "brie", migas: [["BRIE", null]] },
+  "/brie/liquidar":  { pantalla: "liquidar", seccion: "brie", paso: 1, titulo: "Liquidar horas · BRIE",
+                       migas: [["BRIE", "#/brie"], ["Liquidar", null]] },
+  "/brie/adelantos": { pantalla: "adelantos", seccion: "brie", paso: 2,
+                       migas: [["BRIE", "#/brie"], ["Adelantos", null]] },
+  "/brie/mercaderia":{ pantalla: "mercaderia", seccion: "brie", paso: 3,
+                       migas: [["BRIE", "#/brie"], ["Mercadería", null]] },
+};
+
+function navegar() {
+  const ruta = RUTAS[location.hash.replace(/^#/, "") || "/"] || RUTAS["/"];
+  // Al cambiar de Bares a BRIE (o salir) se limpia lo cargado, para no mezclar archivos
+  if ((ruta.seccion || null) !== seccion && datos) limpiar();
+  cancelarNombreBar();
+  seccion = ruta.seccion || null;
+  pantallaActual = ruta.pantalla;
+
+  document.querySelectorAll(".pantalla").forEach(p => p.classList.remove("activa"));
+  $("pantalla-" + ruta.pantalla).classList.add("activa");
+  $("migas").innerHTML = ruta.migas.map(([t, href]) =>
+    `<span class="sep">›</span>` + (href ? `<a href="${href}">${t}</a>` : `<span>${t}</span>`)).join("");
+
+  if (ruta.pantalla === "liquidar") {
+    $("titulo-herramienta").textContent = ruta.titulo;
+    // Si Python todavía está cargando, mostramos la ruedita solo acá
+    if (!web) $("cargando").style.display = "flex";
+  } else {
+    $("cargando").style.display = "none";
+  }
+  dibujarPasos(ruta.paso || null);
+  $("btn-siguiente").style.display = ruta.paso === 1 ? "inline-block" : "none";
+  $("panel-sueldo").classList.toggle("visible", ruta.paso === 1);
+  if (ruta.paso === 1) actualizarSueldos();
+  if (ruta.pantalla === "adelantos" || ruta.pantalla === "mercaderia") mostrarPasoFlujo(ruta.pantalla);
+  window.scrollTo(0, 0);
+}
+window.addEventListener("hashchange", navegar);
+navegar();
+
+// Python se carga en segundo plano mientras la persona elige en el menú
+iniciar().then(() => {
+  if (web && pantallaActual === "liquidar") $("cargando").style.display = "none";
+});
+</script>
+</body>
+</html>
