@@ -271,8 +271,11 @@ def encuadrar(ws, fila_ini, fila_fin, col_ini=1, col_fin=8):
             )
 
 
-def exportar_excel(df, ruta, sueldo_hora=None, adelantos=None):
-    """sueldo_hora y adelantos (dict id -> monto) son opcionales: los usa el flujo BRIE de la web."""
+def exportar_excel(df, ruta, sueldo_hora=None, adelantos=None, mercaderia=None):
+    """
+    sueldo_hora, adelantos (dict id -> monto) y mercaderia (dict id -> {"monto", "cuenta"})
+    son opcionales: los usa el flujo BRIE de la web.
+    """
     wb = Workbook()
     ws = wb.active
     ws.title = "Horas"
@@ -320,7 +323,11 @@ def exportar_excel(df, ruta, sueldo_hora=None, adelantos=None):
     if sueldo_hora:
         cab_r += ["Sueldo por hora", "Sueldo"]
         if adelantos is not None:
-            cab_r += ["Adelanto", "A cobrar"]
+            cab_r += ["Adelanto"]
+        if mercaderia is not None:
+            cab_r += ["Mercadería", "Cuenta mercadería"]
+        if adelantos is not None or mercaderia is not None:
+            cab_r += ["A cobrar"]
     wr.append(cab_r)
     for c in wr[1]:
         c.fill, c.font, c.alignment = CABECERA_FILL, CABECERA_FONT, Alignment(horizontal="center", wrap_text=True)
@@ -340,20 +347,32 @@ def exportar_excel(df, ruta, sueldo_hora=None, adelantos=None):
                 wr.cell(i, col).fill, wr.cell(i, col).font = COLORES[nivel]
         if sueldo_hora:
             sueldo = round(r.total.total_seconds() / 3600 * sueldo_hora, 2)
-            montos = [sueldo_hora, sueldo]
+            montos, a_cobrar = [sueldo_hora, sueldo], sueldo
             if adelantos is not None:
                 adelanto = float(adelantos.get(str(r.id), 0) or 0)
-                montos += [adelanto, round(sueldo - adelanto, 2)]
+                montos.append(adelanto)
+                a_cobrar -= adelanto
+            if mercaderia is not None:
+                m = mercaderia.get(str(r.id)) or {}
+                monto_m = float(m.get("monto", 0) or 0)
+                montos += [monto_m, m.get("cuenta", "")]
+                a_cobrar -= monto_m
+            if adelantos is not None or mercaderia is not None:
+                montos.append(round(a_cobrar, 2))
             for k, v in enumerate(montos, start=12):
                 c = wr.cell(i, k, v)
-                c.number_format = '"$" #,##0.00'
+                if not isinstance(v, str):
+                    c.number_format = '"$" #,##0.00'
                 c.border = BORDE
-            wr.cell(i, 11 + len(montos)).font = Font(bold=True)
+            ultima = wr.cell(i, 11 + len(montos))
+            ultima.font = Font(bold=True, color="9C5700" if a_cobrar < 0 else "000000")
+            if a_cobrar < 0:      # a cobrar negativo: amarillo, igual que en la página
+                ultima.fill = PatternFill("solid", fgColor="FFEB9C")
         estado = wr.cell(i, 11)
         estado.fill, estado.font = (COLORES[SOSPECHOSO] if revisar else
                                     (PatternFill("solid", fgColor="C6EFCE"), Font(color="006100", bold=True)))
 
-    for col, ancho in zip("ABCDEFGHIJKLMNO", [7, 14, 16, 12, 8, 11, 12, 11, 10, 12, 10, 14, 15, 14, 15]):
+    for col, ancho in zip("ABCDEFGHIJKLMNOPQ", [7, 14, 16, 12, 8, 11, 12, 11, 10, 12, 10, 14, 15, 14, 15, 30, 15]):
         wr.column_dimensions[col].width = ancho
     wr.row_dimensions[1].height = 30
     wr.freeze_panes = "A2"

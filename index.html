@@ -187,6 +187,21 @@
   .tabla-adelantos tfoot td { background: var(--bg-3); }
   .quitar { background: transparent; border: 1px solid #7a4a4a; color: #ffb3b3; padding: 3px 8px; font-size: 12px; border-radius: 4px; cursor: pointer; }
   .quitar:hover { background: #5a2a2a; }
+  /* Mercadería */
+  .merc-archivo { background: var(--bg-3); border: 1px solid #3f3f3f; border-radius: 8px; padding: 14px; margin-bottom: 14px; display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; }
+  .merc-archivo.vacio { border: 2px dashed #4a4a4a; justify-content: center; text-align: center; padding: 28px 16px; flex-direction: column; }
+  .merc-archivo.vacio.encima { border-color: var(--accent); background: #1a2533; }
+  .merc-archivo .detalle { font-size: 13.5px; }
+  .merc-archivo .detalle b { color: #fff; }
+  .merc-archivo .detalle small { color: var(--fg-dim); display: block; margin-top: 2px; }
+  .merc-avisos { margin-bottom: 12px; padding: 10px 12px; border-radius: 6px; background: #5a4a1a; color: #ffe699; font-size: 13px; }
+  .form-merc { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; }
+  .form-adelanto option:disabled { color: #888; }
+  .merc-pendientes { margin-top: 14px; background: var(--bg-2); border: 1px solid #3f3f3f; border-radius: 8px; padding: 10px 14px; }
+  .merc-pendientes summary { cursor: pointer; font-weight: 700; }
+  .merc-pendientes ul { margin: 8px 0 4px; padding-left: 18px; font-size: 13px; }
+  .merc-pendientes li { margin: 3px 0; }
+  .merc-pendientes h4 { margin: 12px 0 2px; font-size: 13px; color: var(--fg-dim); }
   #btn-siguiente { display: none; background: var(--accent); border-color: var(--accent); color: #fff; }
   #btn-siguiente:hover:not(:disabled) { background: #3a7bc8; }
   .volver { display: inline-block; background: var(--btn); color: var(--fg); text-decoration: none; padding: 10px 16px; border-radius: 6px; font-weight: 600; border: 1px solid #4a4a4a; }
@@ -311,10 +326,34 @@
         <h2>Mercadería — próximamente</h2>
         <p>Esta sección todavía está en construcción.</p>
       </div>
-      <div class="contenido-seccion" id="contenido-mercaderia"><!-- acá va el contenido de Mercadería --></div>
+      <div class="contenido-seccion" id="contenido-mercaderia">
+        <input type="file" id="merc-input" accept=".xlsx" hidden>
+        <div class="merc-archivo" id="merc-archivo"></div>
+        <div class="merc-avisos" id="merc-avisos" style="display:none"></div>
+        <div id="merc-trabajo">
+          <div class="form-adelanto form-merc">
+            <div>
+              <label for="merc-empleado">Empleado del local</label>
+              <select id="merc-empleado"></select>
+            </div>
+            <div>
+              <label for="merc-cuenta">Cuenta en el archivo de mercadería</label>
+              <select id="merc-cuenta"></select>
+            </div>
+            <button class="boton-flujo principal" id="btn-restar-merc">➖ Restar mercadería</button>
+            <div id="merc-info"></div>
+          </div>
+          <div class="tabla-adelantos"><div class="tabla-scroll"><table>
+            <thead><tr><th>Empleado</th><th class="num">Sueldo</th><th class="num">Adelanto</th><th class="num">Mercadería</th><th class="num">A cobrar</th><th></th></tr></thead>
+            <tbody id="merc-filas"></tbody>
+            <tfoot id="merc-totales"></tfoot>
+          </table></div></div>
+          <details class="merc-pendientes" id="merc-pendientes"></details>
+        </div>
+      </div>
       <div class="acciones-flujo">
         <a class="boton-flujo" href="#/brie/adelantos">⬅ Volver a Adelantos</a>
-        <button class="boton-flujo principal" id="btn-finalizar" disabled title="Disponible cuando estén listas las secciones">Descargar liquidación final (próximamente)</button>
+        <button class="boton-flujo principal" id="btn-finalizar">📥 Descargar liquidación final</button>
       </div>
     </div>
   </div>
@@ -386,7 +425,7 @@ let pantallaActual = null;
 
 // Lo que va pasando de un paso al otro en BRIE (Liquidar → Adelantos → Mercadería).
 // Cada sección lee lo anterior y guarda su resultado acá.
-const flujo = { local: "", liquidacion: null, sueldoHora: 0, adelantos: {}, mercaderia: null };
+const flujo = { local: "", liquidacion: null, sueldoHora: 0, adelantos: {}, mercaderia: {} };
 let errorInicio = null;
 
 // ---------- Arranque de Python en el navegador ----------
@@ -435,7 +474,7 @@ async function leerArchivo(file) {
   ["btn-guardar", "btn-atras", "btn-limpiar", "solo-revisar", "busqueda", "btn-siguiente"].forEach(id => $(id).disabled = false);
   $("btn-siguiente").title = "";
   if (seccion === "brie") {   // un archivo nuevo reinicia el flujo de BRIE
-    Object.assign(flujo, { local: nombreBar, liquidacion: datos, adelantos: {}, mercaderia: null });
+    Object.assign(flujo, { local: nombreBar, liquidacion: datos, adelantos: {}, mercaderia: {} });
     dibujarPasos(1);
   }
   $("zona").style.display = "none";
@@ -528,7 +567,7 @@ function limpiar() {
   $("busqueda").value = ""; $("solo-revisar").checked = false; $("archivo").value = "";
   ["btn-guardar", "btn-atras", "btn-limpiar", "solo-revisar", "busqueda", "btn-siguiente"].forEach(id => $(id).disabled = true);
   $("btn-siguiente").title = "Primero cargá el archivo del reloj";
-  Object.assign(flujo, { local: "", liquidacion: null, adelantos: {}, mercaderia: null });
+  Object.assign(flujo, { local: "", liquidacion: null, adelantos: {}, mercaderia: {} });
   if (pantallaActual === "liquidar") dibujarPasos(seccion === "brie" ? 1 : null);
 }
 
@@ -581,14 +620,253 @@ $("busqueda").addEventListener("input", aplicarFiltros);
 document.addEventListener("drop", (e) => {
   const f = e.dataTransfer.files[0];
   if (f && pantallaActual === "liquidar") pedirNombreBar(f);
+  else if (f && pantallaActual === "mercaderia" && flujo.liquidacion) cargarArchivoMerc(f);
 });
+
+
+// =====================================================================
+//  MERCADERÍA (paso 3)
+//  El archivo de mercadería es uno solo para todas las sucursales: se guarda en este
+//  navegador y se reutiliza local por local. Cada cuenta del archivo se aplica UNA sola vez.
+// =====================================================================
+const CLAVE_MERC = "brie.mercaderia.v1";
+let mercMemoria = null;          // copia en memoria por si el navegador no deja guardar
+let mercGuardadoOk = true;
+
+function leerMerc() {
+  try { const t = localStorage.getItem(CLAVE_MERC); if (t) return JSON.parse(t); } catch (e) {}
+  return mercMemoria;
+}
+function guardarMerc(m) {
+  mercMemoria = m;
+  try { localStorage.setItem(CLAVE_MERC, JSON.stringify(m)); mercGuardadoOk = true; }
+  catch (e) { mercGuardadoOk = false; }
+}
+
+// --- Coincidencia de nombres entre el reloj ("Matias Lopez") y el archivo ("LOPEZ MATIAS EZEQUIEL")
+const normalizar = (t) => String(t).normalize("NFD").replace(/[̀-ͯ]/g, "")
+  .toUpperCase().replace(/[^A-Z\s]/g, " ").split(/\s+/).filter(x => x.length > 1);
+function puntaje(nombreReloj, nombreArchivo) {
+  const a = normalizar(nombreReloj), b = normalizar(nombreArchivo);
+  let p = 0;
+  for (const x of a) {
+    if (b.includes(x)) p += 1;
+    else if (x.length >= 4 && b.some(y => y.length >= 4 && (y.startsWith(x) || x.startsWith(y)))) p += 0.7;
+  }
+  return p;
+}
+function sugerirCuenta(emp, cuentas) {
+  const libres = cuentas.filter(c => !cuentaUsada(c.codigo));
+  const conPuntos = libres.map(c => [c, puntaje(nombreDe(emp), c.nombre)]).sort((x, y) => y[1] - x[1]);
+  if (!conPuntos.length || conPuntos[0][1] < 1.7) return null;              // nombre y apellido
+  if (conPuntos[1] && conPuntos[1][1] === conPuntos[0][1]) return null;     // empate: que elija la persona
+  return conPuntos[0][0];
+}
+
+const cuentaUsada = (codigo) => { const m = leerMerc(); return m && m.aplicados[codigo]; };
+const aCobrar = (e) => sueldoDe(e) - (flujo.adelantos[e.id] || 0) - ((flujo.mercaderia[e.id] || {}).monto || 0);
+
+// Si el local ya se había trabajado (por ejemplo, se recargó la página), recupera lo aplicado
+function recuperarAplicados() {
+  const m = leerMerc();
+  if (!m) return;
+  const local = flujo.local.trim().toUpperCase();
+  for (const [codigo, ap] of Object.entries(m.aplicados)) {
+    if (ap.local.trim().toUpperCase() !== local) continue;
+    const emp = flujo.liquidacion.empleados.find(e => e.id === ap.relojId);
+    const cuenta = m.datos.empleados.find(c => c.codigo === codigo);
+    if (emp && cuenta && !flujo.mercaderia[emp.id]) flujo.mercaderia[emp.id] = { codigo, nombre: cuenta.nombre, monto: ap.monto };
+  }
+}
+
+async function cargarArchivoMerc(file) {
+  if (!web) return;
+  if (!/\.xlsx$/i.test(file.name)) { infoMerc("El archivo de mercadería tiene que ser .xlsx", "error"); return; }
+  const ruta = "/tmp/merc_" + file.name.replace(/[^\w.\-]/g, "_");
+  let datosMerc;
+  try {
+    py.FS.writeFile(ruta, new Uint8Array(await file.arrayBuffer()));
+    datosMerc = JSON.parse(py.pyimport("mercaderia").procesar(ruta));
+  } catch (e) {
+    infoMerc("No se pudo leer el archivo de mercadería: " + String(e.message || e).split("\n").filter(Boolean).slice(-1)[0], "error");
+    return;
+  }
+  const anterior = leerMerc();
+  // Mismo período = archivo corregido: se conservan las cuentas ya aplicadas. Otro período = mes nuevo.
+  const aplicados = anterior && anterior.datos.periodo === datosMerc.periodo ? anterior.aplicados : {};
+  for (const c of Object.keys(aplicados)) if (!datosMerc.empleados.some(x => x.codigo === c)) delete aplicados[c];
+  guardarMerc({ archivo: file.name, cargado: new Date().toISOString(), datos: datosMerc, aplicados });
+  if (!anterior || anterior.datos.periodo !== datosMerc.periodo) {
+    for (const id of Object.keys(flujo.mercaderia)) delete flujo.mercaderia[id];
+  }
+  mostrarPasoFlujo("mercaderia");
+  infoMerc(`✓ Archivo cargado: ${datosMerc.empleados.length} cuentas. Queda guardado en este navegador para las demás sucursales.`, "ok");
+}
+
+function dibujarArchivoMerc(m) {
+  const caja = $("merc-archivo");
+  if (!m) {
+    caja.className = "merc-archivo vacio";
+    caja.innerHTML = `<div style="font-size:30px">📦</div>
+      <b>Cargá el archivo de Mercadería a Personal (con descuento)</b>
+      <span style="color:var(--fg-dim);font-size:13px">Se carga una sola vez y queda guardado para usarlo en todas las sucursales.</span>
+      <label class="boton-flujo principal" for="merc-input" style="margin-top:6px">📂 Elegir archivo .xlsx</label>`;
+    return;
+  }
+  const d = m.datos, usadas = Object.keys(m.aplicados).length;
+  caja.className = "merc-archivo";
+  caja.innerHTML = `<div class="detalle">📦 <b>Mercadería ${esc(d.periodo)}</b> · ${d.empleados.length} cuentas · total a descontar <b>${pesos(d.total)}</b>
+      <small>${esc(m.archivo)} · cargado el ${new Date(m.cargado).toLocaleDateString("es-AR")} · aplicadas ${usadas} de ${d.empleados.length} (sumando todas las sucursales)
+      ${mercGuardadoOk ? "" : " · ⚠ este navegador no deja guardar: se pierde al cerrar la página"}</small></div>
+    <label class="boton-flujo" for="merc-input">🔄 Cambiar archivo</label>`;
+}
+
+function infoMerc(texto, clase = "") { $("merc-info").className = clase; $("merc-info").innerHTML = texto; }
+
+function dibujarMercaderia() {
+  const m = leerMerc();
+  recuperarAplicados();
+  dibujarArchivoMerc(m);
+  $("merc-trabajo").style.display = m ? "block" : "none";
+  $("merc-avisos").style.display = m && m.datos.avisos.length ? "block" : "none";
+  if (m) $("merc-avisos").innerHTML = "⚠ Revisá el archivo:<br>" + m.datos.avisos.map(esc).join("<br>");
+  if (!m) return;
+
+  const emps = flujo.liquidacion.empleados;
+  const selE = $("merc-empleado"), elegido = selE.value;
+  selE.innerHTML = `<option value="">— Elegí un empleado —</option>` + emps.map(e => {
+    const ap = flujo.mercaderia[e.id], neg = ap && aCobrar(e) < 0;
+    return `<option value="${esc(e.id)}"${ap ? ` class="${neg ? "negativo" : "con-adelanto"}"` : ""}>${ap ? (neg ? "⚠ " : "✓ ") : ""}` +
+      `${esc(nombreDe(e))} (${esc(e.id)})${ap ? " — mercadería " + pesos(ap.monto) : ""}</option>`;
+  }).join("");
+  selE.value = emps.some(e => e.id === elegido) ? elegido : "";
+
+  let tS = 0, tA = 0, tM = 0;
+  $("merc-filas").innerHTML = emps.map(e => {
+    const s = sueldoDe(e), a = flujo.adelantos[e.id] || 0, ap = flujo.mercaderia[e.id], mm = ap ? ap.monto : 0, resto = s - a - mm;
+    tS += s; tA += a; tM += mm;
+    const clase = resto < 0 ? "negativo" : ap ? "con-adelanto" : "";
+    return `<tr class="${clase}"><td>${ap ? (resto < 0 ? "⚠ " : "✓ ") : ""}${esc(nombreDe(e))} <span style="color:var(--fg-dim)">(${esc(e.id)})</span>` +
+      `${ap ? `<br><small style="opacity:.8">↳ ${esc(ap.nombre)} (${esc(ap.codigo)})</small>` : ""}</td>
+      <td class="num">${pesos(s)}</td><td class="num">${a ? pesos(a) : "—"}</td><td class="num">${ap ? pesos(mm) : "—"}</td>
+      <td class="num"><b>${pesos(resto)}</b></td>
+      <td>${ap ? `<button class="quitar" data-id="${esc(e.id)}" title="Por si te equivocaste">Deshacer</button>` : ""}</td></tr>`;
+  }).join("");
+  $("merc-totales").innerHTML = `<tr><td>Total</td><td class="num">${pesos(tS)}</td><td class="num">${pesos(tA)}</td>` +
+    `<td class="num">${pesos(tM)}</td><td class="num">${pesos(tS - tA - tM)}</td><td></td></tr>`;
+
+  // Cuentas del archivo: sin asignar / ya asignadas (en cualquier sucursal)
+  const libres = m.datos.empleados.filter(c => !m.aplicados[c.codigo]);
+  const usadas = m.datos.empleados.filter(c => m.aplicados[c.codigo]);
+  $("merc-pendientes").innerHTML = `<summary>Cuentas del archivo: ${libres.length} sin asignar · ${usadas.length} ya asignadas</summary>
+    <h4>Sin asignar</h4><ul>${libres.map(c => `<li>${esc(c.nombre)} (${esc(c.codigo)}) — ${pesos(c.total)}</li>`).join("") || "<li>Ninguna 🎉</li>"}</ul>
+    <h4>Ya asignadas</h4><ul>${usadas.map(c => { const ap = m.aplicados[c.codigo];
+      return `<li>${esc(c.nombre)} — ${pesos(c.total)} → <b>${esc(ap.empleado)}</b> (${esc(ap.local)})
+        <button class="quitar" data-liberar="${esc(c.codigo)}" title="La vuelve a dejar disponible">Liberar</button></li>`; }).join("") || "<li>Ninguna</li>"}</ul>`;
+
+  dibujarCuentas();
+}
+
+function dibujarCuentas() {
+  const m = leerMerc();
+  const emp = flujo.liquidacion.empleados.find(x => x.id === $("merc-empleado").value);
+  const selC = $("merc-cuenta");
+  const cuentas = [...m.datos.empleados].sort((x, y) => x.nombre.localeCompare(y.nombre));
+  const sugerida = emp && !flujo.mercaderia[emp.id] ? sugerirCuenta(emp, cuentas) : null;
+  // Al cambiar de empleado no se arrastra la cuenta elegida para el anterior
+  const elegida = selC.dataset.emp === (emp ? emp.id : "") ? selC.value : "";
+  selC.dataset.emp = emp ? emp.id : "";
+  selC.innerHTML = `<option value="">— Elegí la cuenta —</option>` + cuentas.map(c => {
+    const ap = m.aplicados[c.codigo];
+    return `<option value="${esc(c.codigo)}"${ap ? " disabled" : ""}>${sugerida && sugerida.codigo === c.codigo ? "★ " : ""}` +
+      `${esc(c.nombre)} (${esc(c.codigo)}) — ${pesos(c.total)}${ap ? ` — ya aplicada a ${esc(ap.empleado)} (${esc(ap.local)})` : ""}</option>`;
+  }).join("");
+  selC.value = sugerida ? sugerida.codigo : (cuentas.some(c => c.codigo === elegida && !m.aplicados[c.codigo]) ? elegida : "");
+  mostrarInfoMerc(sugerida);
+}
+
+function mostrarInfoMerc(sugerida) {
+  const m = leerMerc();
+  const emp = flujo.liquidacion.empleados.find(x => x.id === $("merc-empleado").value);
+  const cuenta = m.datos.empleados.find(c => c.codigo === $("merc-cuenta").value);
+  const ya = emp && flujo.mercaderia[emp.id];
+  $("merc-cuenta").disabled = !emp || !!ya;
+  $("btn-restar-merc").disabled = !emp || !!ya || !cuenta;
+  if (!emp) return infoMerc("Elegí el empleado y después su cuenta en el archivo de mercadería. No hace falta que todos tengan.");
+  if (ya) return infoMerc(`${aCobrar(emp) < 0 ? "⚠" : "✓"} A <b>${esc(nombreDe(emp))}</b> ya se le restó la mercadería de ` +
+    `<b>${esc(ya.nombre)}</b> (${pesos(ya.monto)}). Si te equivocaste, tocá “Deshacer” en la tabla.`, aCobrar(emp) < 0 ? "alerta" : "ok");
+  const base = `<b>${esc(nombreDe(emp))}</b>: sueldo ${pesos(sueldoDe(emp))}` +
+    (flujo.adelantos[emp.id] ? ` · adelanto ${pesos(flujo.adelantos[emp.id])}` : "");
+  if (!cuenta) return infoMerc(base + ". No se encontró una cuenta con el mismo nombre: elegila de la lista si tiene mercadería.");
+  infoMerc(base + ` · mercadería <b>${pesos(cuenta.total)}</b> → le quedaría <b>${pesos(aCobrar(emp) - cuenta.total)}</b>` +
+    (sugerida && sugerida.codigo === cuenta.codigo ? `<br>★ Cuenta sugerida por el nombre: revisá que sea la persona correcta.` : ""));
+}
+
+function restarMercaderia() {
+  const m = leerMerc();
+  const emp = flujo.liquidacion.empleados.find(x => x.id === $("merc-empleado").value);
+  const cuenta = m.datos.empleados.find(c => c.codigo === $("merc-cuenta").value);
+  if (!emp || !cuenta || flujo.mercaderia[emp.id] || m.aplicados[cuenta.codigo]) return;
+  flujo.mercaderia[emp.id] = { codigo: cuenta.codigo, nombre: cuenta.nombre, monto: cuenta.total };
+  m.aplicados[cuenta.codigo] = { local: flujo.local, relojId: emp.id, empleado: nombreDe(emp), monto: cuenta.total };
+  guardarMerc(m);
+  mostrarPasoFlujo("mercaderia");
+  const resto = aCobrar(emp);
+  if (resto < 0) infoMerc(`⚠ Atención: entre adelanto y mercadería, <b>${esc(nombreDe(emp))}</b> supera su sueldo. ` +
+    `Queda debiendo <b>${pesos(-resto)}</b>.`, "alerta");
+  else infoMerc(`✓ Listo: a <b>${esc(nombreDe(emp))}</b> se le restaron <b>${pesos(cuenta.total)}</b> de mercadería. ` +
+    `Le queda a cobrar <b>${pesos(resto)}</b>.`, "ok");
+}
+
+function deshacerMercaderia(relojId) {
+  const ap = flujo.mercaderia[relojId];
+  if (!ap) return;
+  const m = leerMerc();
+  if (m && m.aplicados[ap.codigo]) { delete m.aplicados[ap.codigo]; guardarMerc(m); }
+  delete flujo.mercaderia[relojId];
+  mostrarPasoFlujo("mercaderia");
+}
+
+function liberarCuenta(codigo) {
+  const m = leerMerc();
+  if (!m || !m.aplicados[codigo]) return;
+  for (const [id, ap] of Object.entries(flujo.mercaderia)) if (ap.codigo === codigo) delete flujo.mercaderia[id];
+  delete m.aplicados[codigo];
+  guardarMerc(m);
+  mostrarPasoFlujo("mercaderia");
+}
+
+function descargarFinal() {
+  if (!flujo.liquidacion || !web) return;
+  try {
+    const ruta = "/tmp/liquidacion_final.xlsx";
+    const merc = Object.fromEntries(Object.entries(flujo.mercaderia).map(([id, ap]) =>
+      [id, { monto: ap.monto, cuenta: `${ap.codigo} · ${ap.nombre}` }]));
+    web.exportar(JSON.stringify(flujo.liquidacion.empleados.map(e => e.id)), ruta, flujo.sueldoHora,
+      JSON.stringify(flujo.adelantos), JSON.stringify(merc));
+    const blob = new Blob([py.FS.readFile(ruta)], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `${(flujo.local || "BRIE").replace(/[\\/:*?"<>|]+/g, "-").trim()} - liquidación final.xlsx`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  } catch (e) { infoMerc("No se pudo generar el Excel: " + e.message, "error"); }
+}
+
+$("merc-input").addEventListener("change", (e) => { if (e.target.files[0]) cargarArchivoMerc(e.target.files[0]); e.target.value = ""; });
+$("merc-empleado").addEventListener("change", dibujarCuentas);
+$("merc-cuenta").addEventListener("change", () => mostrarInfoMerc(null));
+$("btn-restar-merc").addEventListener("click", restarMercaderia);
+$("btn-finalizar").addEventListener("click", descargarFinal);
+$("merc-filas").addEventListener("click", (ev) => { const b = ev.target.closest(".quitar"); if (b) deshacerMercaderia(b.dataset.id); });
+$("merc-pendientes").addEventListener("click", (ev) => { const b = ev.target.closest("[data-liberar]"); if (b) { ev.preventDefault(); liberarCuenta(b.dataset.liberar); } });
 
 // ---------- Secciones de BRIE ----------
 // Poné ACTIVA: true cuando una sección tenga su contenido listo:
 // se quita el cartel "PRÓXIMAMENTE" del menú y se muestra su contenido.
 const SECCIONES_BRIE = {
   adelantos:  { ACTIVA: true },
-  mercaderia: { ACTIVA: false },
+  mercaderia: { ACTIVA: true },
 };
 function prepararSecciones() {
   for (const [id, cfg] of Object.entries(SECCIONES_BRIE)) {
@@ -632,11 +910,14 @@ function mostrarPasoFlujo(id) {
   const totalMin = liq.empleados.reduce((a, e) => a + aMinutos(e.total), 0);
   const totalSueldos = liq.empleados.reduce((a, e) => a + sueldoDe(e), 0);
   const totalAdel = Object.values(flujo.adelantos).reduce((a, m) => a + m, 0);
+  const totalMerc = Object.values(flujo.mercaderia).reduce((a, m) => a + m.monto, 0);
   pantalla.querySelector(".contexto").innerHTML =
     `Local: <b>${esc(flujo.local)}</b> · ${liq.empleados.length} empleados · ${aHoras(totalMin)} h · ` +
     `sueldo por hora <b>${pesos(flujo.sueldoHora)}</b> · sueldos <b>${pesos(totalSueldos)}</b>` +
-    (id === "mercaderia" ? ` · adelantos <b>${pesos(totalAdel)}</b> · a cobrar <b>${pesos(totalSueldos - totalAdel)}</b>` : "");
+    (id === "mercaderia" ? ` · adelantos <b>${pesos(totalAdel)}</b> · mercadería <b>${pesos(totalMerc)}</b>` +
+      ` · a cobrar <b>${pesos(totalSueldos - totalAdel - totalMerc)}</b>` : "");
   if (id === "adelantos") dibujarAdelantos();
+  if (id === "mercaderia") dibujarMercaderia();
 }
 
 // ---------- Sueldo por hora ----------

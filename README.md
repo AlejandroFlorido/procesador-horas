@@ -7,10 +7,10 @@ Procesa el archivo que exporta el reloj de fichadas, calcula las horas de cada t
 ## Menú
 
 - **Bares** → liquidar horas.
-- **BRIE** → flujo en 3 pasos: **Liquidar → Adelantos → Mercadería**. Desde Liquidar, el botón "Siguiente paso" lleva el archivo ya procesado a Adelantos, y de ahí a Mercadería (en construcción).
+- **BRIE** → flujo en 3 pasos: **Liquidar → Adelantos → Mercadería**. Desde Liquidar, el botón "Siguiente paso" lleva el archivo ya procesado a Adelantos, y de ahí a Mercadería.
   - **Liquidar:** además del archivo, se completa el **sueldo por hora** (igual para todos). Calcula el sueldo de cada empleado con sus horas totales y lo agrega al Excel (hoja Resumen).
   - **Adelantos:** se elige el empleado en un desplegable, se escribe el monto y se resta. El empleado queda en verde para no restarlo dos veces ("Deshacer" por si hubo un error). Con "Continuar" se pasa a Mercadería; no hace falta que todos tengan adelanto. Si el adelanto **supera el sueldo**, se permite pero avisa y el empleado queda **en amarillo** (a cobrar negativo).
-  - **Mercadería** (en definición): la suma de adelanto + mercadería **sí puede** superar el sueldo; en ese caso el "A cobrar" queda negativo.
+  - **Mercadería:** se carga **una sola vez** el Excel "Merc. a Personal ... con descuento" (mismo formato siempre) y queda guardado en el navegador para todas las sucursales. Se usa el nombre del empleado y su *SubTotal c/Desc.* Por cada empleado del local se sugiere su cuenta por coincidencia de nombre (★); al restarla queda en verde, o en amarillo si adelanto + mercadería supera el sueldo (se permite). Cada cuenta se aplica una sola vez en total; "Deshacer" y "Liberar" corrigen errores. Al final, **Descargar liquidación final** genera el Excel con Sueldo, Adelanto, Mercadería y A cobrar.
 
 ## Qué hace la liquidación
 
