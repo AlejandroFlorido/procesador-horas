@@ -73,10 +73,9 @@ def _buscar_cabecera(filas):
     return None, None
 
 
-def _prolijo(txt):
-    """'zalazar' -> 'Zalazar', 'LUZ' -> 'Luz'; respeta lo que ya viene bien escrito."""
-    txt = " ".join(str(txt).split())
-    return txt.title() if txt.islower() or txt.isupper() else txt
+def _limpio(txt):
+    """Solo saca espacios de más: el nombre queda tal cual se registró en el reloj."""
+    return " ".join(str(txt).split())
 
 
 def leer_lineas(ruta):
@@ -105,8 +104,8 @@ def leer_lineas(ruta):
                 raise ValueError("sin ID")
             registros.append({
                 "id": int(id_txt) if id_txt.isdigit() else id_txt,
-                "nombre": _prolijo(celda("nombre")),
-                "apellido": _prolijo(celda("apellido").strip("-")),
+                "nombre": _limpio(celda("nombre")),
+                "apellido": _limpio(celda("apellido").strip("-")),
                 "fecha": fecha, "hora": hora, "dt": datetime.combine(fecha, hora),
             })
         except Exception:
