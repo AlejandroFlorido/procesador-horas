@@ -1,3 +1,4 @@
+import csv
 import os
 import re
 from datetime import datetime, date, time, timedelta
@@ -29,23 +30,95 @@ NIVELES_A_REVISAR = {SOSPECHOSO, CORTO, SIN_PAREJA}
 # =====================================================================
 #  LECTURA Y PARSEO
 # =====================================================================
-def leer_lineas(ruta):
-    """Devuelve una lista de textos, uno por fichada, sea .xlsx, .xls o .csv."""
+# Nombres de columna del formato nuevo del reloj (reporte "Transaction"), en minúscula
+COLUMNAS_TABLA = {
+    "id": ("id",),
+    "nombre": ("first name", "nombre"),
+    "apellido": ("last name", "apellido"),
+    "fecha": ("date", "fecha"),
+    "hora": ("time", "hora"),
+}
+
+
+def _filas_crudas(ruta):
+    """Devuelve las filas del archivo como listas de celdas (texto), sea .xlsx, .xls o .csv."""
     if ruta.lower().endswith((".xlsx", ".xls")):
         df = pd.read_excel(ruta, header=None, dtype=str)
-        return [" ".join(str(v).strip() for v in fila if pd.notna(v) and str(v).strip())
-                for fila in df.itertuples(index=False)]
+        return [[str(v).strip() if pd.notna(v) else "" for v in fila] for fila in df.itertuples(index=False)]
     for codificacion in ("utf-8-sig", "latin-1"):
         try:
             with open(ruta, encoding=codificacion) as f:
-                return [re.sub(r"[,;\t]", " ", l) for l in f.read().splitlines()]
+                texto = f.read()
+            break
         except UnicodeDecodeError:
             continue
-    raise ValueError("No se pudo leer la codificación del archivo")
+    else:
+        raise ValueError("No se pudo leer la codificación del archivo")
+    separador = ";" if texto.count(";") > texto.count(",") else ","
+    return [next(csv.reader([l], delimiter=separador)) if l.strip() else [] for l in texto.splitlines()]
+
+
+def _buscar_cabecera(filas):
+    """Si el archivo es una tabla con columnas (formato nuevo), devuelve (fila_cabecera, {campo: columna})."""
+    for n, fila in enumerate(filas[:30]):
+        celdas = [c.strip().lower() for c in fila]
+        cols = {}
+        for campo, nombres in COLUMNAS_TABLA.items():
+            for i, c in enumerate(celdas):
+                if c in nombres:
+                    cols[campo] = i
+                    break
+        if {"id", "fecha", "hora"} <= cols.keys():
+            return n, cols
+    return None, None
+
+
+def _prolijo(txt):
+    """'zalazar' -> 'Zalazar', 'LUZ' -> 'Luz'; respeta lo que ya viene bien escrito."""
+    txt = " ".join(str(txt).split())
+    return txt.title() if txt.islower() or txt.isupper() else txt
+
+
+def leer_lineas(ruta):
+    """
+    Devuelve una lista con una entrada por fichada:
+      - formato nuevo (tabla con columnas First Name, Last Name, ID, Department, Date, Time):
+        dict ya interpretado, o ("error", nro_linea, texto) si la fila no se pudo leer;
+      - formato viejo ('74 Nicolas Aguirre 22-oct.-2026 16:05): texto de la línea.
+    Las líneas de encabezado del formato nuevo ("Transaction", "Export Time: ...") se ignoran.
+    """
+    filas = _filas_crudas(ruta)
+    cab, cols = _buscar_cabecera(filas)
+    if cab is None:   # formato viejo: una sola columna con todo junto
+        return [" ".join(c for c in fila if c) for fila in filas]
+
+    registros = []
+    for n, fila in enumerate(filas[cab + 1:], start=cab + 2):
+        if not any(c.strip() for c in fila):
+            continue
+        celda = lambda campo: fila[cols[campo]].strip() if campo in cols and cols[campo] < len(fila) else ""
+        try:
+            fecha = parsear_fecha(celda("fecha"))
+            hora = parsear_hora(celda("hora"))
+            id_txt = celda("id").lstrip("'")
+            if not id_txt:
+                raise ValueError("sin ID")
+            registros.append({
+                "id": int(id_txt) if id_txt.isdigit() else id_txt,
+                "nombre": _prolijo(celda("nombre")),
+                "apellido": _prolijo(celda("apellido").strip("-")),
+                "fecha": fecha, "hora": hora, "dt": datetime.combine(fecha, hora),
+            })
+        except Exception:
+            registros.append(("error", n, ", ".join(fila)))
+    return registros
 
 
 def parsear_fecha(txt):
-    t = txt.lower().replace(".", "")
+    t = txt.lower().replace(".", "").strip()
+    m = re.match(r"(\d{4})-(\d{2})-(\d{2})", t)          # 2026-11-01 (formato nuevo)
+    if m:
+        return date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
     m = re.fullmatch(r"(\d{1,2})-([a-zñ]+)-(\d{4})", t)
     if m and m.group(2)[:3] in MESES:
         return date(int(m.group(3)), MESES[m.group(2)[:3]], int(m.group(1)))
@@ -53,7 +126,7 @@ def parsear_fecha(txt):
 
 
 def parsear_hora(txt):
-    partes = [int(p) for p in txt.split(":")]
+    partes = [int(p) for p in txt.strip().split(" ")[-1].split(":")]
     return time(partes[0], partes[1], partes[2] if len(partes) > 2 else 0)
 
 
@@ -199,13 +272,19 @@ def procesar(lineas):
     """Devuelve (DataFrame con todas las filas procesadas, lista de líneas que no se pudieron leer)."""
     marcas_por_id, orden, invalidas = {}, [], []
     for n, linea in enumerate(lineas, start=1):
-        if not linea.strip():
+        if isinstance(linea, tuple):          # fila del formato nuevo que no se pudo leer
+            invalidas.append((linea[1], linea[2]))
             continue
-        try:
-            m = parsear_linea(linea)
-        except Exception:
-            invalidas.append((n, linea.strip()))
-            continue
+        if isinstance(linea, dict):           # fila del formato nuevo ya interpretada
+            m = linea
+        else:
+            if not linea.strip():
+                continue
+            try:
+                m = parsear_linea(linea)
+            except Exception:
+                invalidas.append((n, linea.strip()))
+                continue
         if m["id"] not in marcas_por_id:
             marcas_por_id[m["id"]] = []
             orden.append(m["id"])

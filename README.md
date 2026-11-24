@@ -14,7 +14,7 @@ Procesa el archivo que exporta el reloj de fichadas, calcula las horas de cada t
 
 ## Qué hace la liquidación
 
-- Separa ID, nombre, apellido, fecha y hora.
+- Lee el reporte del reloj en el **formato nuevo** (CSV "Transaction" con columnas First Name, Last Name, ID, Department, Date, Time) y también el formato viejo de una sola columna. Ignora los encabezados del reporte.
 - Empareja entrada y salida usando **fecha + hora**, así que los turnos que pasan la medianoche (ej. 19:00 → 02:00) se calculan bien.
 - Escribe las horas de cada turno y el **total semanal** (formato `[h]:mm:ss`).
 - Antes de procesar pide el **nombre del bar**; el Excel se descarga con ese nombre.
